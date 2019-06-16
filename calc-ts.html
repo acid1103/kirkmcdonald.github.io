@@ -1,0 +1,350 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Factorio Calculator</title>
+    <link rel="shortcut icon" href="favicon.png" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="calc.css">
+    <link rel="stylesheet" type="text/css" href="dropdown.css">
+<!-- 
+Comment out Kirk's ga while developing
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-66808523-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+-->
+    <script src="third_party/d3.min.js"></script>
+    <script src="third_party/dagre.min.js"></script>
+    <script type="module">
+        import * as d3sankey from "./d3-sankey/index.js"
+        window.d3sankey = d3sankey
+    </script>
+    <script src="third_party/BigInteger.min.js"></script>
+    <script src="third_party/pako.min.js"></script>
+    <script src="third_party/sprintf.js"></script>
+    <script src="third_party/popper.min.js"></script>
+    <script src="override.js"></script>
+    <script src="circlepath.js"></script>
+    <script src="boxline.js"></script>
+    <script src="tooltip.js"></script>
+    <script src="sort.js"></script>
+    <script src="rational.js"></script>
+    <script src="matrix.js"></script>
+    <script src="dropdown.js"></script>
+    <script src="color.js"></script>
+    <script src="simplex.js"></script>
+    <script src="vectorize.js"></script>
+    <script src="subgraphs.js"></script>
+    <script src="factory.js"></script>
+    <script src="belt.js"></script>
+    <script src="fuel.js"></script>
+    <script src="item.js"></script>
+    <script src="group.js"></script>
+    <script src="recipe.js"></script>
+    <script src="module.js"></script>
+    <script src="totals.js"></script>
+    <script src="solve.js"></script>
+    <script src="fragment.js"></script>
+    <script src="events.js"></script>
+    <script src="target.js"></script>
+    <script src="steps.js"></script>
+    <script src="display.js"></script>
+    <script src="visualize.js"></script>
+    <script src="icon.js"></script>
+    <script src="debug.js"></script>
+    <script src="settings.js"></script>
+    <script src="init.js"></script>
+</head>
+
+<!--Copyright 2015-2019 Kirk McDonald
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.-->
+
+<body onload="init()">
+    <table>
+    <tr>
+    <td id="targetparent">
+    <ul id="targets" class="targets"><li><button class="targetButton ui" title="Add new item." onclick="plusHandler()">+</a></li></ul>
+    </td>
+
+    <td class="changecell">
+    <div class="changebox">
+    Recent changes:<br>
+    2019-04-12 - Added new visualizer.<br>
+    2019-04-16 - Moved visualizer settings to visualize tab.<br>
+    2019-04-16 - Dropdowns now require clicking.
+    </div>
+    </td>
+    </tr>
+    </table>
+
+    <div class="tabs">
+        <button class="tab_button" id="totals_button" onclick="clickTab('totals_tab')">Factory</button>
+        <!--<button class="tab_button" id="steps_button" onclick="clickTab('steps_tab')">Items</button>-->
+        <button class="tab_button" id="graph_button" onclick="clickVisualize('graph_tab')">Visualize</button>
+        <button class="tab_button" id="settings_button" onclick="clickTab('settings_tab')">Settings</button>
+        <button class="tab_button" id="faq_button" onclick="clickTab('faq_tab')">FAQ</button>
+        <button class="tab_button" id="about_button" onclick="clickTab('about_tab')">About</button>
+        <button class="tab_button" id="debug_button" onclick="clickTab('debug_tab')">Debug</button>
+    </div>
+
+    <div id="steps_tab" class="tab">
+        <table id="steps"></table>
+        <div id="waste"></div>
+    </div>
+
+    <div id="totals_tab" class="tab">
+        <table id="totals"></table>
+        <span class="displaylink">[<a onclick="toggleVisible('csv_box')">CSV</a>]</span>
+        <div id="csv_box" style="display: none;"><textarea id="csv" readonly></textarea></div>
+    </div>
+
+    <div id="graph_tab" class="tab graph">
+        <div id="graph-wrapper">
+            <div class="graph-button">
+                <span class="graph-button-span" onclick="toggleVisualizerSettings()">
+                    <svg class="gear" viewBox="0 0 32 32" width="32" height="32">
+                        <use href="images/icons.svg#gear" />
+                    </svg>
+                </span>
+            </div>
+            <div class="graph-setting-box">
+                <div class="graph-settings">
+                    <div class="setting-label top">Type:</div>
+                    <div>
+                        <input
+                            type="radio"
+                            name="visualization"
+                            id="vis_sankey"
+                            value="sankey"
+                            checked 
+                            onchange="changeVisualizerType(event)">
+                        <label for="vis_sankey">Sankey diagram</label><br />
+                        <input
+                            type="radio"
+                            name="visualization"
+                            id="vis_box"
+                            value="box"
+                            onchange="changeVisualizerType(event)">
+                        <label for="vis_box">Boxes and lines</label>
+                    </div>
+
+                    <div class="setting-label top">Direction:</div>
+                    <div>
+                        <input
+                            type="radio"
+                            name="vis-direction"
+                            id="visdir_right"
+                            value="right"
+                            checked
+                            onchange="changeVisualizerDirection(event)">
+                        <label for="visdir_right">Horizontal</label><br />
+                        <input
+                            type="radio"
+                            name="vis-direction"
+                            id="visdir_down"
+                            value="down"
+                            onchange="changeVisualizerDirection(event)">
+                        <label for="visdir_down">Vertical</label>
+                    </div>
+
+                    <div class="setting-label middle">Maximum node breadth:</div>
+                    <div>
+                        <input
+                            id="vis-node-breadth"
+                            class="length"
+                            type="number"
+                            min="0"
+                            onchange="changeNodeBreadth(event)"
+                            title="Breadth of largest node in Sankey diagrams. Proportional to breadth of whole diagram."
+                        /> pixels
+                    </div>
+
+                    <div class="setting-label middle">Link length:</div>
+                    <div>
+                        <input
+                            id="vis-link-length"
+                            class="length"
+                            type="number"
+                            min="0"
+                            onchange="changeLinkLength(event)"
+                            title="Distance between ranks in Sankey diagrams. Proportional to length of whole diagram."
+                        /> pixels
+                    </div>
+                </div>
+            </div>
+            <div class="graph-content">
+                <svg id="graph"></svg>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings_tab" class="tab">
+        <table>
+        <tr>
+        <td class="setting-label">Use recipe set:</td>
+        <td><select id="data_set" onchange="changeMod()"></select></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Color scheme:</td>
+        <td><select id="color_scheme" onchange="changeColor(event)"></select></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label top">Display rates as:</td>
+        <td><form id="display_rate"></form></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Rate precision:</td>
+        <td><input id="rprec" class="prec" type="number" value="3" min="0" onchange="changeRPrec(event)"></td>
+        </tr>
+        <tr>
+        <td class="setting-label">Factory precision:</td>
+        <td><input id="fprec" class="prec" type="number" value="1" min="0" onchange="changeFPrec(event)"></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Minimum assembling machine level:</td>
+        <td><span id="minimum_assembler"></span></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Preferred furnace:</td>
+        <td><span id="furnace"></span></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Preferred fuel:</td>
+        <td><span id="fuel"></span></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Primary oil processing recipe:</td>
+        <td><span id="oil"></span></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label"><label for="kovarex">Enable Kovarex processing:</label></td>
+        <td><input type="checkbox" id="kovarex" onchange="changeKovarex(event)" checked></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Preferred belt:</td>
+        <td><span id="belt"></span></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Minimum pipe length:</td>
+        <td><input id="pipe_length" class="length" type="number" value="17" min="0" onchange="changePipeLength(event)"></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Mining productivity bonus:</td>
+        <td>+<input id="mprod" class="mprod" type="number" step="2" value="0" min="0" onchange="changeMprod()">%</td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Default module:</td>
+        <td><span id="default_module"></span></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label">Default beacon:</td>
+        <td><span id="default_beacon"></span> &times; <input id="default_beacon_count" class="beacon" type="number" value="0" onchange="changeDefaultBeaconCount(event)"></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label top">Recipe sort order:</td>
+        <td><input type="radio" name="sort_order" id="topo_order" value="topo" checked onchange="changeSortOrder(event)">
+        <label for="topo_order">Topological order</label><br />
+        <input type="radio" name="sort_order" id="alpha_order" value="alpha" onchange="changeSortOrder(event)">
+        <label for="alpha_order">Alphabetical order</label></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label top">Format values as:</td>
+        <td><input type="radio" name="format" id="decimal_format" value="decimal" checked onchange="changeFormat(event)">
+        <label for="decimal_format">Decimals</label><br />
+        <input type="radio" name="format" id="rational_format" value="rational" onchange="changeFormat(event)">
+        <label for="rational_format">Rationals</label></td>
+        </tr>
+
+        <tr>
+        <td class="setting-label"><label for="tooltip">Fancy tooltips (requires refresh):</label></td>
+        <td><input type="checkbox" id="tooltip" onchange="changeTooltip(event)" checked></td>
+        </tr>
+        </table>
+    </div>
+
+    <div id="about_tab" class="tab">
+    <div class="about-content">
+        This calculator is copyright 2015-2017 Kirk McDonald. It is licensed under the Apache License 2.0, and its source may be <a href="https://github.com/KirkMcDonald/kirkmcdonald.github.io">found on github, here</a>.
+        <p>
+        This calculator is the result of a few years' worth of fooling around, off and on, with performing calculations using Factorio's recipe graph. You may find an essay on the subject, which outlines the techniques used in this calculator, <a href="http://kirkmcdonald.github.io/posts/calculation.html">here</a>.
+        <p>
+        Features of this calculator include:
+        <ul><li>Proper handling of oil products. Obtaining numbers for these recipes can be tricky, as several of the items involved may be produced from multiple recipes.
+        <li>Support for modules, including beacons.
+        <li>Support for the mining productivity bonus, introduced in 0.15.
+        <li>Support for "expensive" mode.
+        <li>Arbitrary numerical precision. Calculations are performed using bigint rationals, so errors from floating-point calculations should not be an issue.
+        <li>Support for multiple simultaneous outputs.
+        <li>May display rates per second, minute, or hour.</ul>
+    </div>
+    </div>
+
+    <div id="faq_tab" class="tab">
+    <div class="about-content">
+        <h3>Do the numbers in the "beacons" column represent the number of modules or the number of beacons?</h3>
+        They represent the number of modules.
+
+        <h3>What does clicking on an item's icon in the "Factory" tab do?</h3>
+        It omits the dependencies of that item's recipe from the solution. The intent behind this feature is to model the case of building a factory when you are shipping in one or more ingredients from elsewhere. For example, if you are making an advanced circuit factory and want to ship in electronic circuits, and want to see the remaining copper cable requirements on their own.
+        <p>
+        Clicking on the icon a second time will restore its dependencies.
+        <p>
+        This feature is not compatible with certain items, namely those that have no dependencies, and those that don't map one-to-one with a recipe.
+
+        <h3>How do I interpret the pipe numbers on the "Factory" tab?</h3>
+        Pipe throughput is inversely proportional to the length of the pipe. This means that the longer a pipe is, the more parallel lanes of pipes will be required.
+        <p>
+        Say the solution calls for 7500 units of heavy oil per second. With the default "minimum pipe length" setting, the calculator will display a value of "[pipe] &times; 7 &le; 47." This means you will need seven parallel lanes of pipes, each with a maximum length of 47 segments.
+        <p>
+        The "minimum pipe length" setting controls the minimum number of segments that a pipe will be permitted before the calculator uses multiple lanes of pipes. It defaults to 17, which corresponds to a fluid rate of 1200/s, which is the output rate of an offshore pump.
+        <p>
+        The number of pipes will be omitted if only one pipe is required.
+
+        <h3>How can I give you money?</h3>
+        <a href="https://www.patreon.com/kirkmcdonald">I'm on Patreon.</a> Thanks!
+    </div>
+    </div>
+
+    <div id="debug_tab" class="tab">
+        <label for="render_debug">Render debug tab:</label>
+        <input type="checkbox" id="render_debug" onchange="toggleDebug(event)"><br>
+        Last solution:
+        <div id="solution"></div>
+        Recipe matrixes:
+        <div id="matrixes"></div>
+    </div>
+
+    <div id="display_count" style="color: var(--dark)">0</div>
+</body>
+</html>

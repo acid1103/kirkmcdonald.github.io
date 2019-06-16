@@ -1,0 +1,38 @@
+{
+  "name": "factorio-calculator-typescript-port",
+  "version": "0.1.0",
+  "description": "A TypeScript port of Kirk McDonald's amazing Factorio Calculator (https://github.com/KirkMcDonald/kirkmcdonald.github.io)",
+  "scripts": {
+    "build": "node build-scripts/build.js",
+    "watch": "concurrently \"node build-scripts/build.js -w\" \"node build-scripts/build.js -s\""
+  },
+  "repository": "https://github.com/acid1103/kirkmcdonald.github.io.git",
+  "author": "Steven Fontaine",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "big-integer": "^1.6.43",
+    "d3": "^5.9.2",
+    "dagre": "^0.8.4",
+    "jquery": "^3.4.1",
+    "pako": "^1.0.10",
+    "popper.js": "^1.15.0",
+    "sprintf-js": "^1.1.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "@types/d3": "^5.7.2",
+    "@types/dagre": "^0.7.42",
+    "@types/jquery": "^3.3.29",
+    "@types/pako": "^1.0.1",
+    "@types/sprintf-js": "^1.1.2",
+    "babelify": "^10.0.0",
+    "browserify": "^16.2.3",
+    "concurrently": "^4.1.0",
+    "live-server": "^1.2.1",
+    "tsify": "^4.0.1",
+    "tslint": "^5.17.0",
+    "typescript": "^3.5.1",
+    "watchify": "^3.11.1"
+  }
+}

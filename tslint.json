@@ -1,0 +1,13 @@
+{
+    "extends": "tslint:recommended",
+    "rules": {
+        "max-line-length": {
+            "options": [
+                120
+            ]
+        },
+        "max-classes-per-file": false,
+        "no-trailing-whitespace": false,
+        "radix": false
+    }
+}
