@@ -1,5 +1,9 @@
-import { window } from "./globals";
-import { InitState } from "./init";
+import d3 = require("d3");
+import { colorSchemes } from "./color";
+import { addInputs, makeDropdown } from "./dropdown";
+import { InitState, SettingsState, window as TEMP_WINDOW_STORAGE } from "./globals";
+import { getImage } from "./icon";
+import { one, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
 import { IObjectMap } from "./utility-types";
 
 class Modification {
@@ -24,91 +28,89 @@ class Oil {
     }
 }
 
-class SettingsState {
-    public static MODIFICATIONS: IObjectMap<Modification> = {
-        "0-16-51": new Modification("Vanilla 0.16.51", "vanilla-0.16.51.json", true, [480, 512]),
-        "0-16-51x": new Modification("Vanilla 0.16.51 - Expensive", "vanilla-0.16.51-expensive.json", true, [480, 512]),
-        "0-17-1": new Modification("Vanilla 0.17.1", "vanilla-0.17.1.json", false, [480, 512]),
-        "0-17-1x": new Modification("Vanilla 0.17.1 - Expensive", "vanilla-0.17.1-expensive.json", false, [480, 512]),
-        "017science": new Modification("0.16.51 w/ 0.17 science mod", "017science-0.16.51.json", true, [480, 512]),
-        "bobs-0-16-51":
-            new Modification("(EXPERIMENTAL) Bob's Mods + base 0.16.51", "bobs-0.16.51.json", true, [800, 832]),
-    };
-    public static DEFAULT_MODIFICATION = "0-16-51";
-    // Ideally we'd write this as a generalized function, but for now we can hard-
-    // code these version upgrades.
-    public static modUpdates: IObjectMap<string> = {
-        "0-16-37": "0-16-51",
-        "0-16-37x": "0-16-51x",
-        "bobs-0-16-37": "bobs-0-16-51",
-    };
-    public static DEFAULT_COLOR_SCHEME = "default";
-    public static colorScheme: any = null; // TODO ColorScheme type instead of any type
-    public static seconds = window.one;
-    public static minutes = window.RationalFromFloat(60);
-    public static hours = window.RationalFromFloat(3600);
-    public static displayRates: IObjectMap<any> = {
-        h: SettingsState.hours,
-        m: SettingsState.minutes,
-        s: SettingsState.seconds,
-    };
-    public static longRateNames: IObjectMap<string> = {
-        h: "hour",
-        m: "minute",
-        s: "second",
-    };
-    public static DEFAULT_RATE = "m";
-    public static displayRateFactor = SettingsState.displayRates[SettingsState.DEFAULT_RATE];
-    public static rateName = SettingsState.DEFAULT_RATE;
-    public static DEFAULT_RATE_PRECISION = 3;
-    public static ratePrecision = SettingsState.DEFAULT_RATE_PRECISION;
-    public static DEFAULT_COUNT_PRECISION = 1;
-    public static countPrecision = SettingsState.DEFAULT_COUNT_PRECISION;
-    public static DEFAULT_MINIMUM = "1";
-    public static minimumAssembler = SettingsState.DEFAULT_MINIMUM;
-    public static DEFAULT_FURNACE: string = null;
-    public static DEFAULT_FUEL = "coal";
-    public static preferredFuel: any = null; // TODO Fuel type instead of any type
-    public static OIL_OPTIONS = [
-        new Oil("advanced-oil-processing", "default"),
-        new Oil("basic-oil-processing", "basic"),
-        new Oil("coal-liquefaction", "coal"),
-    ];
-    public static DEFAULT_OIL = "default";
-    public static OIL_EXCLUSION: IObjectMap<IObjectMap<boolean>> = {
-        basic: { "advanced-oil-processing": true },
-        coal: { "advanced-oil-processing": true, "basic-oil-processing": true },
-        default: {},
-    };
-    public static oilGroup = SettingsState.DEFAULT_OIL;
-    public static DEFAULT_KOVAREX = true;
-    public static kovarexEnabled: boolean = false;
-    public static DEFAULT_BELT = "transport-belt";
-    public static preferredBelt = SettingsState.DEFAULT_BELT;
-    public static preferredBeltSpeed: any = null; // TODO Rational type instead of any type
-    public static DEFAULT_PIPE = window.RationalFromFloat(17);
-    public static minPipeLength = SettingsState.DEFAULT_PIPE;
-    public static maxPipeThroughput: any = null; // TODO Rational type instead of any type
-    public static DEFAULT_MINING_PROD = "0";
-    public static DEFAULT_VISUALIZER = "sankey";
-    public static visualizer = SettingsState.DEFAULT_VISUALIZER;
-    public static DEFAULT_DIRECTION = "right";
-    public static visDirection = SettingsState.DEFAULT_DIRECTION;
-    public static DEFAULT_NODE_BREADTH = 175;
-    public static maxNodeHeight = SettingsState.DEFAULT_NODE_BREADTH;
-    public static DEFAULT_LINK_LENGTH = 200;
-    public static linkLength = SettingsState.DEFAULT_LINK_LENGTH;
-    public static DEFAULT_FORMAT = "decimal";
-    public static displayFormat = SettingsState.DEFAULT_FORMAT;
-    public static displayFormats: IObjectMap<string> = {
-        d: "decimal",
-        r: "rational",
-    };
-    public static DEFAULT_TOOLTIP = true;
-    public static tooltipsEnabled = SettingsState.DEFAULT_TOOLTIP;
-    public static DEFAULT_DEBUG = false;
-    public static showDebug = SettingsState.DEFAULT_DEBUG;
-}
+SettingsState.MODIFICATIONS = {
+    "0-16-51": new Modification("Vanilla 0.16.51", "vanilla-0.16.51.json", true, [480, 512]),
+    "0-16-51x": new Modification("Vanilla 0.16.51 - Expensive", "vanilla-0.16.51-expensive.json", true, [480, 512]),
+    "0-17-1": new Modification("Vanilla 0.17.1", "vanilla-0.17.1.json", false, [480, 512]),
+    "0-17-1x": new Modification("Vanilla 0.17.1 - Expensive", "vanilla-0.17.1-expensive.json", false, [480, 512]),
+    "017science": new Modification("0.16.51 w/ 0.17 science mod", "017science-0.16.51.json", true, [480, 512]),
+    "bobs-0-16-51":
+        new Modification("(EXPERIMENTAL) Bob's Mods + base 0.16.51", "bobs-0.16.51.json", true, [800, 832]),
+};
+SettingsState.DEFAULT_MODIFICATION = "0-16-51";
+// Ideally we'd write this as a generalized function, but for now we can hard-
+// code these version upgrades.
+SettingsState.modUpdates = {
+    "0-16-37": "0-16-51",
+    "0-16-37x": "0-16-51x",
+    "bobs-0-16-37": "bobs-0-16-51",
+};
+SettingsState.DEFAULT_COLOR_SCHEME = "default";
+SettingsState.colorScheme = null;
+SettingsState.seconds = one;
+SettingsState.minutes = RationalFromFloat(60);
+SettingsState.hours = RationalFromFloat(3600);
+SettingsState.displayRates = {
+    h: SettingsState.hours,
+    m: SettingsState.minutes,
+    s: SettingsState.seconds,
+};
+SettingsState.longRateNames = {
+    h: "hour",
+    m: "minute",
+    s: "second",
+};
+SettingsState.DEFAULT_RATE = "m";
+SettingsState.displayRateFactor = SettingsState.displayRates[SettingsState.DEFAULT_RATE];
+SettingsState.rateName = SettingsState.DEFAULT_RATE;
+SettingsState.DEFAULT_RATE_PRECISION = 3;
+SettingsState.ratePrecision = SettingsState.DEFAULT_RATE_PRECISION;
+SettingsState.DEFAULT_COUNT_PRECISION = 1;
+SettingsState.countPrecision = SettingsState.DEFAULT_COUNT_PRECISION;
+SettingsState.DEFAULT_MINIMUM = "1";
+SettingsState.minimumAssembler = SettingsState.DEFAULT_MINIMUM;
+SettingsState.DEFAULT_FURNACE = null;
+SettingsState.DEFAULT_FUEL = "coal";
+SettingsState.preferredFuel = null;
+SettingsState.OIL_OPTIONS = [
+    new Oil("advanced-oil-processing", "default"),
+    new Oil("basic-oil-processing", "basic"),
+    new Oil("coal-liquefaction", "coal"),
+];
+SettingsState.DEFAULT_OIL = "default";
+SettingsState.OIL_EXCLUSION = {
+    basic: { "advanced-oil-processing": true },
+    coal: { "advanced-oil-processing": true, "basic-oil-processing": true },
+    default: {},
+};
+SettingsState.oilGroup = SettingsState.DEFAULT_OIL;
+SettingsState.DEFAULT_KOVAREX = true;
+SettingsState.kovarexEnabled = false;
+SettingsState.DEFAULT_BELT = "transport-belt";
+SettingsState.preferredBelt = SettingsState.DEFAULT_BELT;
+SettingsState.preferredBeltSpeed = null;
+SettingsState.DEFAULT_PIPE = RationalFromFloat(17);
+SettingsState.minPipeLength = SettingsState.DEFAULT_PIPE;
+SettingsState.maxPipeThroughput = null;
+SettingsState.DEFAULT_MINING_PROD = "0";
+SettingsState.DEFAULT_VISUALIZER = "sankey";
+SettingsState.visualizer = SettingsState.DEFAULT_VISUALIZER;
+SettingsState.DEFAULT_DIRECTION = "right";
+SettingsState.visDirection = SettingsState.DEFAULT_DIRECTION;
+SettingsState.DEFAULT_NODE_BREADTH = 175;
+SettingsState.maxNodeHeight = SettingsState.DEFAULT_NODE_BREADTH;
+SettingsState.DEFAULT_LINK_LENGTH = 200;
+SettingsState.linkLength = SettingsState.DEFAULT_LINK_LENGTH;
+SettingsState.DEFAULT_FORMAT = "decimal";
+SettingsState.displayFormat = SettingsState.DEFAULT_FORMAT;
+SettingsState.displayFormats = {
+    d: "decimal",
+    r: "rational",
+};
+SettingsState.DEFAULT_TOOLTIP = true;
+SettingsState.tooltipsEnabled = SettingsState.DEFAULT_TOOLTIP;
+SettingsState.DEFAULT_DEBUG = false;
+SettingsState.showDebug = SettingsState.DEFAULT_DEBUG;
 
 function addOverrideOptions(version: string) {
     const tag = "local-" + version.replace(/\./g, "-");
@@ -155,8 +157,8 @@ function renderColorScheme(settings: IObjectMap<string>) {
     setColorScheme(color);
     const colorSelector = document.getElementById("color_scheme");
     if (!colorSelector.hasChildNodes()) {
-        for (let i = 0; i < window.colorSchemes.length; i++) {
-            const scheme = window.colorSchemes[i];
+        for (let i = 0; i < colorSchemes.length; i++) {
+            const scheme = colorSchemes[i];
             const option = document.createElement("option");
             option.textContent = scheme.displayName;
             option.value = scheme.name;
@@ -169,9 +171,9 @@ function renderColorScheme(settings: IObjectMap<string>) {
 }
 
 function setColorScheme(schemeName: string) {
-    for (let i = 0; i < window.colorSchemes.length; i++) {
-        if (window.colorSchemes[i].name === schemeName) {
-            SettingsState.colorScheme = window.colorSchemes[i];
+    for (let i = 0; i < colorSchemes.length; i++) {
+        if (colorSchemes[i].name === schemeName) {
+            SettingsState.colorScheme = colorSchemes[i];
             SettingsState.colorScheme.apply();
             return;
         }
@@ -198,7 +200,7 @@ function renderRateOptions(settings: IObjectMap<string>) {
         if (rate.equal(SettingsState.displayRateFactor)) {
             input.checked = true;
         }
-        input.addEventListener("change", window.displayRateHandler);
+        input.addEventListener("change", TEMP_WINDOW_STORAGE.displayRateHandler);
         node.appendChild(input);
         const label = document.createElement("label");
         label.htmlFor = name + "_rate";
@@ -237,15 +239,15 @@ function renderMinimumAssembler(settings: IObjectMap<string>) {
     const cell = oldNode.parentNode;
     const node = document.createElement("span");
     node.id = "minimum_assembler";
-    const dropdown = window.makeDropdown(window.d3.select(node));
+    const dropdown = makeDropdown(d3.select(node));
     const inputs = dropdown.selectAll("div").data(assemblers).join("div");
-    const labels = window.addInputs(
+    const labels = addInputs(
         inputs,
         "assembler_dropdown",
         (d, i) => String(i + 1) === min,
-        (d, i) => window.changeMin(String(i + 1)),
+        (d, i) => TEMP_WINDOW_STORAGE.changeMin(String(i + 1)),
     );
-    labels.append((d: any) => window.getImage(d, false, dropdown.node()));
+    labels.append((d: any) => getImage(d, false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
 
@@ -267,15 +269,15 @@ function renderFurnace(settings: IObjectMap<string>) {
     const node = document.createElement("span");
     node.id = "furnace";
     const furnaces = InitState.spec.factories.smelting;
-    const dropdown = window.makeDropdown(window.d3.select(node));
+    const dropdown = makeDropdown(d3.select(node));
     const inputs = dropdown.selectAll("div").data(furnaces).join("div");
-    const labels = window.addInputs(
+    const labels = addInputs(
         inputs,
         "furnace_dropdown",
         (d) => d.name === furnaceName,
-        window.changeFurnace,
+        TEMP_WINDOW_STORAGE.changeFurnace,
     );
-    labels.append((d: any) => window.getImage(d, false, dropdown.node()));
+    labels.append((d: any) => getImage(d, false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
 
@@ -289,16 +291,16 @@ function renderFuel(settings: IObjectMap<string>) {
     const cell = oldNode.parentNode;
     const node = document.createElement("span");
     node.id = "fuel";
-    const dropdown = window.makeDropdown(window.d3.select(node));
+    const dropdown = makeDropdown(d3.select(node));
     const inputs = dropdown.selectAll("div").data(InitState.fuel).join("div");
-    const labels = window.addInputs(
+    const labels = addInputs(
         inputs,
         "fuel_dropdown",
         (d) => d.name === fuelName,
-        window.changeFuel,
+        TEMP_WINDOW_STORAGE.changeFuel,
     );
     labels.append((d: any) => {
-        const im = window.getImage(d, false, dropdown.node());
+        const im = getImage(d, false, dropdown.node());
         im.title += " (" + d.valueString() + ")";
         return im;
     });
@@ -325,15 +327,15 @@ function renderOil(settings: IObjectMap<string>) {
     const cell = oldNode.parentNode;
     const node = document.createElement("span");
     node.id = "oil";
-    const dropdown = window.makeDropdown(window.d3.select(node));
+    const dropdown = makeDropdown(d3.select(node));
     const inputs = dropdown.selectAll("div").data(SettingsState.OIL_OPTIONS).join("div");
-    const labels = window.addInputs(
+    const labels = addInputs(
         inputs,
         "oil_dropdown",
         (d) => d.priority === oil,
-        window.changeOil,
+        TEMP_WINDOW_STORAGE.changeOil,
     );
-    labels.append((d: any) => window.getImage(InitState.solver.recipes[d.name], false, dropdown.node()));
+    labels.append((d: any) => getImage(InitState.solver.recipes[d.name], false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
 
@@ -372,15 +374,15 @@ function renderBelt(settings: IObjectMap<string>) {
     const cell = oldNode.parentNode;
     const node = document.createElement("span");
     node.id = "belt";
-    const dropdown = window.makeDropdown(window.d3.select(node));
+    const dropdown = makeDropdown(d3.select(node));
     const inputs = dropdown.selectAll("div").data(InitState.belts).join("div");
-    const labels = window.addInputs(
+    const labels = addInputs(
         inputs,
         "belt_dropdown",
         (d) => d.name === SettingsState.preferredBelt,
-        window.changeBelt,
+        TEMP_WINDOW_STORAGE.changeBelt,
     );
-    labels.append((d: any) => window.getImage(new window.BeltIcon(InitState.solver.items[d.name], d.speed), false, dropdown.node()));
+    labels.append((d: any) => getImage(new TEMP_WINDOW_STORAGE.BeltIcon(InitState.solver.items[d.name], d.speed), false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
 
@@ -404,8 +406,8 @@ function renderPipe(settings: IObjectMap<string>) {
 }
 
 function setMinPipe(lengthString: string) {
-    SettingsState.minPipeLength = window.RationalFromString(lengthString);
-    SettingsState.maxPipeThroughput = window.pipeThroughput(SettingsState.minPipeLength);
+    SettingsState.minPipeLength = RationalFromString(lengthString);
+    SettingsState.maxPipeThroughput = TEMP_WINDOW_STORAGE.pipeThroughput(SettingsState.minPipeLength);
 }
 
 function renderMiningProd(settings: IObjectMap<string>) {
@@ -420,7 +422,7 @@ function renderMiningProd(settings: IObjectMap<string>) {
 
 function getMprod() {
     const mprod = (document.getElementById("mprod") as HTMLInputElement).value;
-    return window.RationalFromFloats(Number(mprod), 100);
+    return RationalFromFloats(Number(mprod), 100);
 }
 
 // default module
@@ -435,11 +437,11 @@ function renderDefaultModule(settings: IObjectMap<string>) {
     const cell = oldDefMod.parentNode;
     const node = document.createElement("span");
     node.id = "default_module";
-    window.moduleDropdown(
-        window.d3.select(node),
+    TEMP_WINDOW_STORAGE.moduleDropdown(
+        d3.select(node),
         "default_module_dropdown",
         (d) => d === defaultModule,
-        window.changeDefaultModule,
+        TEMP_WINDOW_STORAGE.changeDefaultModule,
     );
     cell.replaceChild(node, oldDefMod);
 }
@@ -447,12 +449,12 @@ function renderDefaultModule(settings: IObjectMap<string>) {
 // default beacon
 function renderDefaultBeacon(settings: IObjectMap<string>) {
     let defaultBeacon: any = null;
-    let defaultCount = window.zero;
+    let defaultCount = zero;
     if ("db" in settings) {
         defaultBeacon = InitState.shortModules[settings.db];
     }
     if ("dbc" in settings) {
-        defaultCount = window.RationalFromString(settings.dbc);
+        defaultCount = RationalFromString(settings.dbc);
     }
     InitState.spec.setDefaultBeacon(defaultBeacon, defaultCount);
 
@@ -463,11 +465,11 @@ function renderDefaultBeacon(settings: IObjectMap<string>) {
     const cell = oldDefMod.parentNode;
     const node = document.createElement("span");
     node.id = "default_beacon";
-    window.moduleDropdown(
-        window.d3.select(node),
+    TEMP_WINDOW_STORAGE.moduleDropdown(
+        d3.select(node),
         "default_beacon_dropdown",
         (d: any) => d === defaultBeacon,
-        window.changeDefaultBeacon,
+        TEMP_WINDOW_STORAGE.changeDefaultBeacon,
         (d) => d === null || d.canBeacon(),
     );
     cell.replaceChild(node, oldDefMod);
@@ -561,9 +563,6 @@ function renderSettings(settings: IObjectMap<string>) {
 
 // export vars to window
 (() => {
-    for (const key of Object.keys(SettingsState)) {
-        moveObjToWindow(SettingsState, key);
-    }
     moveFnToWindow(Modification);
     moveFnToWindow(Oil);
     moveFnToWindow(addOverrideOptions);
@@ -600,17 +599,13 @@ function renderSettings(settings: IObjectMap<string>) {
     moveFnToWindow(renderShowDebug);
     moveFnToWindow(renderSettings);
     function moveFnToWindow(fn: { name: string }) {
-        (window as unknown as any)[fn.name] = fn;
-    }
-    function moveObjToWindow(obj: any, key: string) {
-        (window as unknown as any)[key] = obj[key];
+        (TEMP_WINDOW_STORAGE as unknown as any)[fn.name] = fn;
     }
 })();
 
 export {
     Modification,
     Oil,
-    SettingsState,
     addOverrideOptions,
     normalizeDataSetName,
     renderDataSetOptions,

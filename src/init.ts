@@ -1,6 +1,10 @@
 import $ = require("jquery");
-import { window as TEMP_WINDOW_STORAGE } from "./globals";
-import { addOverrideOptions, currentMod, renderDataSetOptions, renderSettings, SettingsState } from "./settings";
+import { getBelts } from "./belt";
+import { Data } from "./data";
+import { InitState, SettingsState, window as TEMP_WINDOW_STORAGE } from "./globals";
+import { getSprites } from "./icon";
+import { RationalFromFloat } from "./rational";
+import { addOverrideOptions, currentMod, renderDataSetOptions, renderSettings } from "./settings";
 import { IObjectMap } from "./utility-types";
 
 // postpone initing until the DOM has been fully loaded
@@ -11,32 +15,31 @@ const readyStateCheckInterval = setInterval(() => {
     }
 }, 10);
 
-class InitState {
-    public static recipeTable: any = null; // TODO RecipeTable type instead of any
-    // Contains collections of items and recipes. (solve.js)
-    public static solver: any = null; // TODO Solver type instead of any
-    // Contains module and factory settings, as well as other settings. (factory.js)
-    public static spec: any = null; // TODO FactorySpec type instead of any
-    // Map from module name to Module object.
-    public static modules: any = null; // TODO IObjectMap<Modules> type instead of any
-    // Array of modules, sorted by 'order'.
-    public static sortedModules: string[] = null;
-    // Map from short module name to Module object.
-    public static shortModules: any = null; // TODO IObjectMap<Module> type instead of any
-    // Array of arrays of modules, separated by category and sorted.
-    public static moduleRows: any = null; // TODO Module[][] type instead of any
-    // Array of Belt objects, sorted by speed.
-    public static belts: any = null; // TODO Belt[] type instead of any
-    // Array of Fuel objects, sorted by value.
-    public static fuel: any = null; // TODO Fuel[] type instead of any
-    // Array of item groups, in turn divided into subgroups. For display purposes.
-    public static itemGroups: any = null; // TODO Item[][][] type instead of any
-    // Boolean with whether to use old (0.16) calculations.
-    public static useLegacyCalculations: boolean = false;
-    // Size of the sprite sheet, as [x, y] array.
-    public static spriteSheetSize: number[] = null;
-    public static initDone: boolean = false;
-}
+InitState.recipeTable = null;
+// Contains collections of items and recipes. (solve.js)
+InitState.solver = null;
+// Contains module and factory settings, as well as other settings. (factory.js)
+InitState.spec = null;
+// Map from module name to Module object.
+InitState.modules = null;
+// Array of modules, sorted by 'order'.
+InitState.sortedModules = null;
+// Map from short module name to Module object.
+InitState.shortModules = null;
+// Array of arrays of modules, separated by category and sorted.
+InitState.moduleRows = null;
+// Array of Belt objects, sorted by speed.
+InitState.belts = null;
+// Array of Fuel objects, sorted by value.
+InitState.fuel = null;
+// Array of item groups, in turn divided into subgroups. For display purposes.
+InitState.itemGroups = null;
+// Boolean with whether to use old (0.16) calculations.
+InitState.useLegacyCalculations = false;
+// Size of the sprite sheet, as [x, y] array.
+InitState.spriteSheetSize = null;
+InitState.initDone = false;
+InitState.OVERRIDE = null;
 
 // Set the page back to a state immediately following initial setup, but before
 // the dataset is loaded for the first time.
@@ -44,7 +47,7 @@ class InitState {
 // This is intended to be called when the top-level dataset is changed.
 // Therefore, it also resets the fragment and settings.
 function reset() {
-    TEMP_WINDOW_STORAGE.location.hash = "";
+    window.location.hash = "";
 
     TEMP_WINDOW_STORAGE.build_targets = [];
     const targetList = $("#targets");
@@ -62,8 +65,7 @@ function reset() {
     oldTotals.replaceWith(newTotals);
 }
 
-// TODO change callback type to (data: Data) => void instead of (data: any) => void
-function loadDataRunner(modName: string, callback: (data: any) => void) {
+function loadDataRunner(modName: string, callback: (data: Data) => void) {
     const xobj = new XMLHttpRequest();
     let mod = SettingsState.MODIFICATIONS[modName];
     if (!mod) {
@@ -88,8 +90,8 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
     if (!settings) {
         settings = {};
     }
-    loadDataRunner(modName, function(data: any) { // remove data type after changing loadDataRunner signature
-        TEMP_WINDOW_STORAGE.getSprites(data);
+    loadDataRunner(modName, function(data) {
+        getSprites(data);
         const graph = TEMP_WINDOW_STORAGE.getRecipeGraph(data);
         InitState.modules = TEMP_WINDOW_STORAGE.getModules(data);
         InitState.sortedModules = TEMP_WINDOW_STORAGE.sorted(InitState.modules, (m: string) => InitState.modules[m].order);
@@ -120,7 +122,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
         const items = graph[0];
         const recipes = graph[1];
 
-        InitState.belts = TEMP_WINDOW_STORAGE.getBelts(data);
+        InitState.belts = getBelts(data);
         InitState.fuel = TEMP_WINDOW_STORAGE.getFuel(data, items).chemical;
 
         InitState.itemGroups = TEMP_WINDOW_STORAGE.getItemGroups(items, data);
@@ -197,7 +199,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
                     }
                     const factory = InitState.spec.getFactory(recipe);
                     if (factory) {
-                        const count = TEMP_WINDOW_STORAGE.RationalFromFloat(Number(beaconSettingsSplit[1]));
+                        const count = RationalFromFloat(Number(beaconSettingsSplit[1]));
                         factory.beaconModule = module;
                         factory.beaconCount = count;
                     }
@@ -209,14 +211,14 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
 
         // Prune factory spec after first solution is calculated.
         TEMP_WINDOW_STORAGE.pruneSpec(TEMP_WINDOW_STORAGE.globalTotals);
-        TEMP_WINDOW_STORAGE.location.hash = "#" + TEMP_WINDOW_STORAGE.formatSettings();
+        window.location.hash = "#" + TEMP_WINDOW_STORAGE.formatSettings();
     });
 }
 
 function init() {
-    const settings = TEMP_WINDOW_STORAGE.loadSettings(TEMP_WINDOW_STORAGE.location.hash);
-    if (TEMP_WINDOW_STORAGE.OVERRIDE !== null) {
-        addOverrideOptions(TEMP_WINDOW_STORAGE.OVERRIDE);
+    const settings = TEMP_WINDOW_STORAGE.loadSettings(window.location.hash);
+    if (InitState.OVERRIDE !== null) {
+        addOverrideOptions(InitState.OVERRIDE);
     }
     renderDataSetOptions(settings);
     if ("tab" in settings) {
@@ -228,25 +230,7 @@ function init() {
     TEMP_WINDOW_STORAGE.clickTab(TEMP_WINDOW_STORAGE.currentTab);
 }
 
-// export vars to window
-(() => {
-    for (const key of Object.keys(InitState)) {
-        moveObjToWindow(InitState, key);
-    }
-    moveFnToWindow(reset);
-    moveFnToWindow(loadDataRunner);
-    moveFnToWindow(loadData);
-    function moveFnToWindow(fn: (..._: any[]) => any) {
-        (window as unknown as any)[fn.name] = fn;
-    }
-    function moveObjToWindow(obj: any, key: string) {
-        (window as unknown as any)[key] = obj[key];
-    }
-})();
-
 export {
-    InitState,
     reset,
-    loadDataRunner,
     loadData,
 };
