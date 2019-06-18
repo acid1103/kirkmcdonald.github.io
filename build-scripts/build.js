@@ -49,6 +49,12 @@ if (serve) {
         extensions: ['.tsx', '.ts']
     });
 
+    if (!watch) {
+        b.transform('uglifyify', {
+            global: true
+        });
+    }
+
     b.on('update', bundle);
     b.on('log', console.log);
     bundle();
