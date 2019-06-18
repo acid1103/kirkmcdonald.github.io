@@ -1,10 +1,11 @@
 import d3 = require("d3");
 import { colorSchemes } from "./color";
 import { addInputs, makeDropdown } from "./dropdown";
-import { InitState, SettingsState, window as TEMP_WINDOW_STORAGE } from "./globals";
 import { getImage } from "./icon";
+import { moduleDropdown } from "./module";
 import { one, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
 import { IObjectMap } from "./utility-types";
+import { InitState, SettingsState, window as TEMP_WINDOW_STORAGE } from "./window-interface";
 
 class Modification {
     public name: string;
@@ -437,7 +438,7 @@ function renderDefaultModule(settings: IObjectMap<string>) {
     const cell = oldDefMod.parentNode;
     const node = document.createElement("span");
     node.id = "default_module";
-    TEMP_WINDOW_STORAGE.moduleDropdown(
+    moduleDropdown(
         d3.select(node),
         "default_module_dropdown",
         (d) => d === defaultModule,
@@ -465,7 +466,7 @@ function renderDefaultBeacon(settings: IObjectMap<string>) {
     const cell = oldDefMod.parentNode;
     const node = document.createElement("span");
     node.id = "default_beacon";
-    TEMP_WINDOW_STORAGE.moduleDropdown(
+    moduleDropdown(
         d3.select(node),
         "default_beacon_dropdown",
         (d: any) => d === defaultBeacon,
@@ -561,82 +562,19 @@ function renderSettings(settings: IObjectMap<string>) {
     renderValueFormat(settings);
 }
 
-// export vars to window
-(() => {
-    moveFnToWindow(Modification);
-    moveFnToWindow(Oil);
-    moveFnToWindow(addOverrideOptions);
-    moveFnToWindow(normalizeDataSetName);
-    moveFnToWindow(renderDataSetOptions);
-    moveFnToWindow(currentMod);
-    moveFnToWindow(renderColorScheme);
-    moveFnToWindow(setColorScheme);
-    moveFnToWindow(renderRateOptions);
-    moveFnToWindow(renderPrecisions);
-    moveFnToWindow(renderMinimumAssembler);
-    moveFnToWindow(setMinimumAssembler);
-    moveFnToWindow(renderFurnace);
-    moveFnToWindow(renderFuel);
-    moveFnToWindow(setPreferredFuel);
-    moveFnToWindow(renderOil);
-    moveFnToWindow(setOilRecipe);
-    moveFnToWindow(renderKovarex);
-    moveFnToWindow(setKovarex);
-    moveFnToWindow(renderBelt);
-    moveFnToWindow(setPreferredBelt);
-    moveFnToWindow(renderPipe);
-    moveFnToWindow(setMinPipe);
-    moveFnToWindow(renderMiningProd);
-    moveFnToWindow(getMprod);
-    moveFnToWindow(renderDefaultModule);
-    moveFnToWindow(renderDefaultBeacon);
-    moveFnToWindow(renderVisualizerType);
-    moveFnToWindow(renderVisualizerDirection);
-    moveFnToWindow(renderNodeBreadth);
-    moveFnToWindow(renderLinkLength);
-    moveFnToWindow(renderValueFormat);
-    moveFnToWindow(renderTooltip);
-    moveFnToWindow(renderShowDebug);
-    moveFnToWindow(renderSettings);
-    function moveFnToWindow(fn: { name: string }) {
-        (TEMP_WINDOW_STORAGE as unknown as any)[fn.name] = fn;
-    }
-})();
-
 export {
     Modification,
     Oil,
     addOverrideOptions,
-    normalizeDataSetName,
     renderDataSetOptions,
     currentMod,
-    renderColorScheme,
     setColorScheme,
-    renderRateOptions,
-    renderPrecisions,
-    renderMinimumAssembler,
     setMinimumAssembler,
-    renderFurnace,
-    renderFuel,
     setPreferredFuel,
-    renderOil,
     setOilRecipe,
-    renderKovarex,
     setKovarex,
-    renderBelt,
     setPreferredBelt,
-    renderPipe,
     setMinPipe,
-    renderMiningProd,
     getMprod,
-    renderDefaultModule,
-    renderDefaultBeacon,
-    renderVisualizerType,
-    renderVisualizerDirection,
-    renderNodeBreadth,
-    renderLinkLength,
-    renderValueFormat,
-    renderTooltip,
-    renderShowDebug,
     renderSettings,
 };

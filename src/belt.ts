@@ -1,5 +1,5 @@
 import { Data } from "./data";
-import { InitState } from "./globals";
+import { InitState } from "./window-interface";
 import { Rational, RationalFromFloat } from "./rational";
 
 export class Belt {

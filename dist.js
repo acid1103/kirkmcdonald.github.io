@@ -33430,7 +33430,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-const globals_1 = require("./globals");
+const window_interface_1 = require("./window-interface");
 
 const rational_1 = require("./rational");
 
@@ -33460,7 +33460,7 @@ function getBelts(data) {
     const pixelsPerSecond = baseSpeed.mul(rational_1.RationalFromFloat(3840));
     let speed;
 
-    if (globals_1.InitState.useLegacyCalculations) {
+    if (window_interface_1.InitState.useLegacyCalculations) {
       speed = pixelsPerSecond.div(rational_1.RationalFromFloat(9));
     } else {
       speed = pixelsPerSecond.div(rational_1.RationalFromFloat(8));
@@ -33483,7 +33483,7 @@ function getBelts(data) {
 
 exports.getBelts = getBelts;
 
-},{"./globals":40,"./rational":44}],37:[function(require,module,exports){
+},{"./rational":48,"./window-interface":57}],37:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -33944,6 +33944,79 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+const rational_1 = require("./rational");
+
+const window_interface_1 = require("./window-interface");
+
+function formatName(name) {
+  name = name.replace(new RegExp("-", "g"), " ");
+  return name[0].toUpperCase() + name.slice(1);
+}
+
+exports.formatName = formatName;
+
+function displayCount(x) {
+  if (window_interface_1.SettingsState.displayFormat === "rational") {
+    return x.toMixed();
+  } else {
+    return x.toUpDecimal(window_interface_1.SettingsState.countPrecision);
+  }
+}
+
+function align(s, prec) {
+  if (window_interface_1.SettingsState.displayFormat === "rational") {
+    return s;
+  }
+
+  let idx = s.indexOf(".");
+
+  if (idx === -1) {
+    idx = s.length;
+  }
+
+  let toAdd = prec - s.length + idx;
+
+  if (prec > 0) {
+    toAdd += 1;
+  }
+
+  while (toAdd > 0) {
+    s += "\u00A0";
+    toAdd--;
+  }
+
+  return s;
+}
+
+const powerSuffixes = ["\u00A0W", "kW", "MW", "GW", "TW", "PW"];
+
+function alignPower(x, prec) {
+  if (prec === undefined) {
+    prec = window_interface_1.SettingsState.countPrecision;
+  }
+
+  const thousand = rational_1.RationalFromFloat(1000);
+  let i = 0;
+
+  while (thousand.less(x) && i < powerSuffixes.length - 1) {
+    x = x.div(thousand);
+    i++;
+  }
+
+  return align(displayCount(x), prec) + " " + powerSuffixes[i];
+}
+
+exports.alignPower = alignPower;
+const NO_MODULE = "no module";
+exports.NO_MODULE = NO_MODULE;
+
+},{"./rational":48,"./window-interface":57}],40:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
 const d3 = require("d3");
 
 const dropdownLocal = d3.local();
@@ -33972,10 +34045,9 @@ function toggleDropdown() {
       onOpen(dropdown);
     }
   }
-}
-
-exports.toggleDropdown = toggleDropdown; // Appends a dropdown to the selection, and returns a selection over the div
+} // Appends a dropdown to the selection, and returns a selection over the div
 // for the content of the dropdown.
+
 
 function makeDropdown(selector, onOpen, onClose) {
   const dropdown = selector.append("div").classed("dropdownWrapper", true).each(function () {
@@ -34015,79 +34087,782 @@ function addInputs(selector, name, checked, callback) {
 
 exports.addInputs = addInputs;
 
-},{"d3":33}],40:[function(require,module,exports){
+},{"d3":33}],41:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-const d3 = require("d3");
-
-const circlepath_1 = require("./circlepath");
-
-const dropdown_1 = require("./dropdown");
+const display_1 = require("./display");
 
 const icon_1 = require("./icon");
 
-const init_1 = require("./init");
-
-const matrix_1 = require("./matrix");
-
 const rational_1 = require("./rational");
 
-const tooltip_1 = require("./tooltip");
+const window_interface_1 = require("./window-interface");
 
-window.d3 = d3;
-window.CirclePath = circlepath_1.CirclePath;
-window.makeCurve = circlepath_1.makeCurve;
-window.toggleDropdown = dropdown_1.toggleDropdown;
-window.makeDropdown = dropdown_1.makeDropdown;
-window.addInputs = dropdown_1.addInputs;
-window.PX_WIDTH = icon_1.PX_WIDTH;
-window.PX_HEIGHT = icon_1.PX_HEIGHT;
-window.getImage = icon_1.getImage;
-window.getExtraImage = icon_1.getExtraImage;
-window.getSprites = icon_1.getSprites;
-window.reset = init_1.reset;
-window.reset = init_1.loadData;
-window.Matrix = matrix_1.Matrix;
-window.Rational = rational_1.Rational;
-window.RationalFromString = rational_1.RationalFromString;
-window.RationalFromFloat = rational_1.RationalFromFloat;
-window.RationalFromFloats = rational_1.RationalFromFloats;
-window.minusOne = rational_1.minusOne;
-window.zero = rational_1.zero;
-window.one = rational_1.one;
-window.half = rational_1.half;
-window.oneThird = rational_1.oneThird;
-window.twotwoThirds = rational_1.twoThirds;
-window.Tooltip = tooltip_1.Tooltip;
-const windowTempGlobals = window;
-exports.window = windowTempGlobals;
-const windowInitState = window;
-exports.InitState = windowInitState;
-const windowSettingsState = window;
-exports.SettingsState = windowSettingsState;
-const windowIconState = window;
-exports.IconState = windowIconState;
+class FactoryDef {
+  constructor(name, col, row, categories, max_ingredients, speed, moduleSlots, energyUsage, fuel) {
+    this.name = name;
+    this.icon_col = col;
+    this.icon_row = row;
+    this.categories = categories;
+    this.max_ing = max_ingredients;
+    this.speed = speed;
+    this.moduleSlots = moduleSlots;
+    this.energyUsage = energyUsage;
+    this.fuel = fuel;
+  }
 
-},{"./circlepath":37,"./dropdown":39,"./icon":41,"./init":42,"./matrix":43,"./rational":44,"./tooltip":46,"d3":33}],41:[function(require,module,exports){
+  less(other) {
+    if (!this.speed.equal(other.speed)) {
+      return this.speed.less(other.speed);
+    }
+
+    return this.moduleSlots < other.moduleSlots;
+  }
+
+  makeFactory(spec, recipe) {
+    return new Factory(this, spec, recipe);
+  }
+
+  canBeacon() {
+    return this.moduleSlots > 0;
+  }
+
+  renderTooltip() {
+    const t = document.createElement("div");
+    t.classList.add("frame");
+    const title = document.createElement("h3");
+    const im = icon_1.getImage(this, true);
+    title.appendChild(im);
+    title.appendChild(new Text(display_1.formatName(this.name)));
+    t.appendChild(title);
+    let b;
+
+    if (this.max_ing) {
+      b = document.createElement("b");
+      b.textContent = "Max ingredients: ";
+      t.appendChild(b);
+      t.appendChild(new Text(String(this.max_ing)));
+      t.appendChild(document.createElement("br"));
+    }
+
+    b = document.createElement("b");
+    b.textContent = "Energy consumption: ";
+    t.appendChild(b);
+    t.appendChild(new Text(display_1.alignPower(this.energyUsage, 0)));
+    t.appendChild(document.createElement("br"));
+    b = document.createElement("b");
+    b.textContent = "Crafting speed: ";
+    t.appendChild(b);
+    t.appendChild(new Text(this.speed.toDecimal()));
+    t.appendChild(document.createElement("br"));
+    b = document.createElement("b");
+    b.textContent = "Module slots: ";
+    t.appendChild(b);
+    t.appendChild(new Text(String(this.moduleSlots)));
+    return t;
+  }
+
+}
+
+exports.FactoryDef = FactoryDef;
+
+class MinerDef extends FactoryDef {
+  constructor(name, col, row, categories, power, speed, moduleSlots, energyUsage, fuel) {
+    super(name, col, row, categories, 0, rational_1.zero, moduleSlots, energyUsage, fuel);
+    this.mining_power = power;
+    this.mining_speed = speed;
+  }
+
+  less(other) {
+    if (window_interface_1.InitState.useLegacyCalculations && !this.mining_power.equal(other.mining_power)) {
+      return this.mining_power.less(other.mining_power);
+    }
+
+    return this.mining_speed.less(other.mining_speed);
+  }
+
+  makeFactory(spec, recipe) {
+    return new Miner(this, spec, recipe);
+  }
+
+  renderTooltip() {
+    const t = document.createElement("div");
+    t.classList.add("frame");
+    const title = document.createElement("h3");
+    const im = icon_1.getImage(this, true);
+    title.appendChild(im);
+    title.appendChild(new Text(display_1.formatName(this.name)));
+    t.appendChild(title);
+    let b = document.createElement("b");
+    b.textContent = "Energy consumption: ";
+    t.appendChild(b);
+    t.appendChild(new Text(display_1.alignPower(this.energyUsage, 0)));
+    t.appendChild(document.createElement("br"));
+
+    if (window_interface_1.InitState.useLegacyCalculations) {
+      b = document.createElement("b");
+      b.textContent = "Mining power: ";
+      t.appendChild(b);
+      t.appendChild(new Text(this.mining_power.toDecimal()));
+      t.appendChild(document.createElement("br"));
+    }
+
+    b = document.createElement("b");
+    b.textContent = "Mining speed: ";
+    t.appendChild(b);
+    t.appendChild(new Text(this.mining_speed.toDecimal()));
+    t.appendChild(document.createElement("br"));
+    b = document.createElement("b");
+    b.textContent = "Module slots: ";
+    t.appendChild(b);
+    t.appendChild(new Text(String(this.moduleSlots)));
+    return t;
+  }
+
+}
+
+class RocketLaunchDef extends FactoryDef {
+  constructor(name, col, row, categories, max_ingredients, speed, moduleSlots, energyUsage, fuel) {
+    super(name, col, row, categories, max_ingredients, speed, moduleSlots, energyUsage, fuel);
+  }
+
+  makeFactory(spec, recipe) {
+    return new RocketLaunch(this, spec, recipe);
+  }
+
+}
+
+class RocketSiloDef extends FactoryDef {
+  constructor(name, col, row, categories, max_ingredients, speed, moduleSlots, energyUsage, fuel) {
+    super(name, col, row, categories, max_ingredients, speed, moduleSlots, energyUsage, fuel);
+  }
+
+  makeFactory(spec, recipe) {
+    return new RocketSilo(this, spec, recipe);
+  }
+
+}
+
+class Factory {
+  constructor(factoryDef, spec, recipe) {
+    this.recipe = recipe;
+    this.modules = [];
+    this.setFactory(factoryDef, spec);
+    this.beaconModule = spec.defaultBeacon;
+    this.beaconCount = spec.defaultBeaconCount;
+  }
+
+  setFactory(factoryDef, spec) {
+    this.name = factoryDef.name;
+    this.factory = factoryDef;
+
+    if (this.modules.length > factoryDef.moduleSlots) {
+      this.modules.length = factoryDef.moduleSlots;
+    }
+
+    let toAdd = null;
+
+    if (spec.defaultModule && spec.defaultModule.canUse(this.recipe)) {
+      toAdd = spec.defaultModule;
+    }
+
+    while (this.modules.length < factoryDef.moduleSlots) {
+      this.modules.push(toAdd);
+    }
+  }
+
+  getModule(index) {
+    return this.modules[index];
+  } // Returns true if the module change requires a recalculation.
+
+
+  setModule(index, module) {
+    if (index >= this.modules.length) {
+      return false;
+    }
+
+    const oldModule = this.modules[index];
+    const needRecalc = oldModule && oldModule.hasProdEffect() || module && module.hasProdEffect();
+    this.modules[index] = module;
+    return needRecalc;
+  }
+
+  speedEffect(spec) {
+    let speed = rational_1.one;
+
+    for (const module of this.modules) {
+      if (!module) {
+        continue;
+      }
+
+      speed = speed.add(module.speed);
+    }
+
+    if (this.modules.length > 0) {
+      const beaconModule = this.beaconModule;
+
+      if (beaconModule) {
+        speed = speed.add(beaconModule.speed.mul(this.beaconCount).mul(rational_1.half));
+      }
+    }
+
+    return speed;
+  }
+
+  prodEffect(spec) {
+    let prod = rational_1.one;
+
+    for (const module of this.modules) {
+      if (!module) {
+        continue;
+      }
+
+      prod = prod.add(module.productivity);
+    }
+
+    return prod;
+  }
+
+  powerEffect(spec) {
+    let power = rational_1.one;
+
+    for (const module of this.modules) {
+      if (!module) {
+        continue;
+      }
+
+      power = power.add(module.power);
+    }
+
+    if (this.modules.length > 0) {
+      const beaconModule = this.beaconModule;
+
+      if (beaconModule) {
+        power = power.add(beaconModule.power.mul(this.beaconCount).mul(rational_1.half));
+      }
+    }
+
+    const minimum = rational_1.RationalFromFloats(1, 5);
+
+    if (power.less(minimum)) {
+      power = minimum;
+    }
+
+    return power;
+  }
+
+  powerUsage(spec, count) {
+    let power = this.factory.energyUsage;
+
+    if (this.factory.fuel) {
+      return {
+        fuel: this.factory.fuel,
+        power: power.mul(count)
+      };
+    } // Default drain value.
+
+
+    const drain = power.div(rational_1.RationalFromFloat(30));
+    const divmod = count.divmod(rational_1.one);
+    power = power.mul(count);
+
+    if (!divmod.remainder.isZero()) {
+      const idle = rational_1.one.sub(divmod.remainder);
+      power = power.add(idle.mul(drain));
+    }
+
+    power = power.mul(this.powerEffect(spec));
+    return {
+      fuel: "electric",
+      power
+    };
+  }
+
+  recipeRate(spec, recipe) {
+    return recipe.time.reciprocate().mul(this.factory.speed).mul(this.speedEffect(spec));
+  }
+
+  copyModules(other, recipe) {
+    const length = Math.max(this.modules.length, other.modules.length);
+    let needRecalc = false;
+
+    for (let i = 0; i < length; i++) {
+      const module = this.getModule(i);
+
+      if (!module || module.canUse(recipe)) {
+        needRecalc = other.setModule(i, module) || needRecalc;
+      }
+    }
+
+    if (other.factory.canBeacon()) {
+      other.beaconModule = this.beaconModule;
+      other.beaconCount = this.beaconCount;
+    }
+
+    return needRecalc;
+  }
+
+}
+
+exports.Factory = Factory;
+
+class Miner extends Factory {
+  constructor(factory, spec, recipe) {
+    super(factory, spec, recipe);
+  }
+
+  recipeRate(spec, recipe) {
+    const miner = this.factory;
+    let rate;
+
+    if (window_interface_1.InitState.useLegacyCalculations) {
+      rate = miner.mining_power.sub(recipe.hardness);
+    } else {
+      rate = rational_1.one;
+    }
+
+    return rate.mul(miner.mining_speed).div(recipe.mining_time).mul(this.speedEffect(spec));
+  }
+
+  prodEffect(spec) {
+    const prod = super.prodEffect(spec);
+    return prod.add(spec.miningProd);
+  }
+
+}
+
+const rocketLaunchDuration = rational_1.RationalFromFloats(2475, 60);
+
+function launchRate(spec) {
+  const partRecipe = window_interface_1.InitState.solver.recipes["rocket-part"];
+  const partFactory = spec.getFactory(partRecipe);
+  const partItem = window_interface_1.InitState.solver.items["rocket-part"];
+  const gives = partRecipe.gives(partItem, spec); // The base rate at which the silo can make rocket parts.
+
+  const rate = Factory.prototype.recipeRate.call(partFactory, spec, partRecipe); // Number of times to complete the rocket part recipe per launch.
+
+  const perLaunch = rational_1.RationalFromFloat(100).div(gives); // Total length of time required to launch a rocket.
+
+  const time = perLaunch.div(rate).add(rocketLaunchDuration);
+  const launchRate = time.reciprocate();
+  const partRate = perLaunch.div(time);
+  return {
+    part: partRate,
+    launch: launchRate
+  };
+}
+
+class RocketLaunch extends Factory {
+  constructor(factory, spec, recipe) {
+    super(factory, spec, recipe);
+  }
+
+  recipeRate(spec, recipe) {
+    return launchRate(spec).launch;
+  }
+
+}
+
+class RocketSilo extends Factory {
+  constructor(factory, spec, recipe) {
+    super(factory, spec, recipe);
+  }
+
+  recipeRate(spec, recipe) {
+    return launchRate(spec).part;
+  }
+
+}
+
+const assembly_machine_categories = {
+  "advanced-crafting": true,
+  "crafting": true,
+  "crafting-with-fluid": true
+};
+
+function compareFactories(a, b) {
+  if (a.less(b)) {
+    return -1;
+  }
+
+  if (b.less(a)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+class FactorySpec {
+  constructor(factories) {
+    this.spec = {};
+    this.factories = {};
+
+    for (const factory of factories) {
+      for (const category of factory.categories) {
+        if (!(category in this.factories)) {
+          this.factories[category] = [];
+        }
+
+        this.factories[category].push(factory);
+      }
+    }
+
+    for (const category of Object.keys(this.factories)) {
+      this.factories[category].sort(compareFactories);
+    }
+
+    this.setMinimum("1");
+    const smelters = this.factories.smelting;
+    this.furnace = smelters[smelters.length - 1];
+    window_interface_1.SettingsState.DEFAULT_FURNACE = this.furnace.name;
+    this.miningProd = rational_1.zero;
+    this.ignore = {};
+    this.defaultModule = null; // XXX: Not used yet.
+
+    this.defaultBeacon = null;
+    this.defaultBeaconCount = rational_1.zero;
+  } // min is a string like "1", "2", or "3".
+
+
+  setMinimum(min) {
+    const minIndex = Number(min) - 1;
+    this.minimum = this.factories.crafting[minIndex];
+  }
+
+  useMinimum(recipe) {
+    return recipe.category in assembly_machine_categories;
+  }
+
+  setFurnace(name) {
+    const smelters = this.factories.smelting;
+
+    for (const smelter of smelters) {
+      if (smelter.name === name) {
+        this.furnace = smelter;
+        return;
+      }
+    }
+  }
+
+  useFurnace(recipe) {
+    return recipe.category === "smelting";
+  }
+
+  getFactoryDef(recipe) {
+    if (this.useFurnace(recipe)) {
+      return this.furnace;
+    }
+
+    const factories = this.factories[recipe.category];
+
+    if (!this.useMinimum(recipe)) {
+      return factories[factories.length - 1];
+    }
+
+    let factoryDef;
+
+    for (factoryDef of factories) {
+      if (!(factoryDef.less(this.minimum) || window_interface_1.InitState.useLegacyCalculations && factoryDef.max_ing < recipe.ingredients.length)) {
+        break;
+      }
+    }
+
+    return factoryDef;
+  } // TODO: This should be very cheap. Calling getFactoryDef on each call
+  // should not be necessary. Changing the minimum should proactively update
+  // all of the factories to which it applies.
+
+
+  getFactory(recipe) {
+    if (!recipe.category) {
+      return null;
+    }
+
+    const factoryDef = this.getFactoryDef(recipe);
+    const factory = this.spec[recipe.name]; // If the minimum changes, update the factory the next time we get it.
+
+    if (factory) {
+      factory.setFactory(factoryDef, this);
+      return factory;
+    }
+
+    this.spec[recipe.name] = factoryDef.makeFactory(this, recipe);
+    this.spec[recipe.name].beaconCount = this.defaultBeaconCount;
+    return this.spec[recipe.name];
+  }
+
+  moduleCount(recipe) {
+    const factory = this.getFactory(recipe);
+
+    if (!factory) {
+      return 0;
+    }
+
+    return factory.modules.length;
+  }
+
+  getModule(recipe, index) {
+    const factory = this.getFactory(recipe);
+    const module = factory.getModule(index);
+    return module;
+  }
+
+  setModule(recipe, index, module) {
+    const factory = this.getFactory(recipe);
+
+    if (!factory) {
+      return false;
+    }
+
+    return factory.setModule(index, module);
+  }
+
+  getBeaconInfo(recipe) {
+    const factory = this.getFactory(recipe);
+    const module = factory.beaconModule;
+    return {
+      module,
+      count: factory.beaconCount
+    };
+  }
+
+  setDefaultModule(module) {
+    // Set anything set to the old default to the new.
+    for (const recipeName of Object.keys(this.spec)) {
+      const factory = this.spec[recipeName];
+      const recipe = factory.recipe;
+
+      for (let i = 0; i < factory.modules.length; i++) {
+        if (factory.modules[i] === this.defaultModule && (!module || module.canUse(recipe))) {
+          factory.modules[i] = module;
+        }
+      }
+    }
+
+    this.defaultModule = module;
+  }
+
+  setDefaultBeacon(module, count) {
+    for (const recipeName of Object.keys(this.spec)) {
+      const factory = this.spec[recipeName];
+      const recipe = factory.recipe; // Set anything set to the old defeault beacon module to the new.
+
+      if (factory.beaconModule === this.defaultBeacon && (!module || module.canUse(recipe))) {
+        factory.beaconModule = module;
+      } // Set any beacon counts equal to the old default to the new one.
+
+
+      if (factory.beaconCount.equal(this.defaultBeaconCount)) {
+        factory.beaconCount = count;
+      }
+    }
+
+    this.defaultBeacon = module;
+    this.defaultBeaconCount = count;
+  }
+
+  getCount(recipe, rate) {
+    const factory = this.getFactory(recipe);
+
+    if (!factory) {
+      return rational_1.zero;
+    }
+
+    return rate.div(factory.recipeRate(this, recipe));
+  }
+
+  recipeRate(recipe) {
+    const factory = this.getFactory(recipe);
+
+    if (!factory) {
+      return null;
+    }
+
+    return factory.recipeRate(this, recipe);
+  }
+
+}
+
+exports.FactorySpec = FactorySpec;
+
+function renderTooltipBase() {
+  const t = document.createElement("div");
+  t.classList.add("frame");
+  const title = document.createElement("h3");
+  const im = icon_1.getImage(this, true);
+  title.appendChild(im);
+  title.appendChild(new Text(display_1.formatName(this.name)));
+  t.appendChild(title);
+  return t;
+}
+
+function getFactories(data) {
+  const factories = [];
+  const pumpDef = data["offshore-pump"]["offshore-pump"];
+  const pump = new FactoryDef("offshore-pump", pumpDef.icon_col, pumpDef.icon_row, ["water"], 1, rational_1.one, 0, rational_1.zero, null);
+  pump.renderTooltip = renderTooltipBase;
+  factories.push(pump);
+  const reactorDef = data.reactor["nuclear-reactor"];
+  const reactor = new FactoryDef("nuclear-reactor", reactorDef.icon_col, reactorDef.icon_row, ["nuclear"], 1, rational_1.one, 0, rational_1.zero, null);
+  reactor.renderTooltip = renderTooltipBase;
+  factories.push(reactor);
+  const boilerDef = data.boiler.boiler; // XXX: Should derive this from game data.
+
+  let boiler_energy;
+
+  if (window_interface_1.InitState.useLegacyCalculations) {
+    boiler_energy = rational_1.RationalFromFloat(3600000);
+  } else {
+    boiler_energy = rational_1.RationalFromFloat(1800000);
+  }
+
+  const boiler = new FactoryDef("boiler", boilerDef.icon_col, boilerDef.icon_row, ["boiler"], 1, rational_1.one, 0, boiler_energy, "chemical");
+  boiler.renderTooltip = renderTooltipBase;
+  factories.push(boiler);
+  const siloDef = data["rocket-silo"]["rocket-silo"];
+  const launch = new RocketLaunchDef("rocket-silo", siloDef.icon_col, siloDef.icon_row, ["rocket-launch"], 2, rational_1.one, 0, rational_1.zero, null);
+  launch.renderTooltip = renderTooltipBase;
+  factories.push(launch);
+
+  for (const type of [data["assembling-machine"], data.furnace]) {
+    for (const name of Object.keys(type)) {
+      const d = type[name];
+      let fuel = null;
+
+      if ("energy_source" in d && d.energy_source.type === "burner") {
+        fuel = d.energy_source.fuel_category;
+      }
+
+      factories.push(new FactoryDef(d.name, d.icon_col, d.icon_row, d.crafting_categories, d.ingredient_count, rational_1.RationalFromFloat(d.crafting_speed), d.module_slots, rational_1.RationalFromFloat(d.energy_usage), fuel));
+    }
+  }
+
+  for (const name of Object.keys(data["rocket-silo"])) {
+    const d = data["rocket-silo"][name];
+    factories.push(new RocketSiloDef(d.name, d.icon_col, d.icon_row, d.crafting_categories, undefined, rational_1.RationalFromFloat(d.crafting_speed), d.module_slots, rational_1.RationalFromFloat(d.energy_usage), null));
+  }
+
+  for (const name of Object.keys(data["mining-drill"])) {
+    const d = data["mining-drill"][name];
+
+    if (d.name === "pumpjack") {
+      continue;
+    }
+
+    let fuel = null;
+
+    if (d.energy_source && d.energy_source.type === "burner") {
+      fuel = d.energy_source.fuel_category;
+    }
+
+    let power;
+
+    if ("mining_power" in d) {
+      power = rational_1.RationalFromFloat(d.mining_power);
+    } else {
+      power = null;
+    }
+
+    factories.push(new MinerDef(d.name, d.icon_col, d.icon_row, ["mining-basic-solid"], power, rational_1.RationalFromFloat(d.mining_speed), d.module_slots, rational_1.RationalFromFloat(d.energy_usage), fuel));
+  }
+
+  return factories;
+}
+
+exports.getFactories = getFactories;
+
+},{"./display":39,"./icon":43,"./rational":48,"./window-interface":57}],42:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-const globals_1 = require("./globals");
+const item_1 = require("./item");
+
+const rational_1 = require("./rational");
+
+const energySuffixes = ["J", "kJ", "MJ", "GJ", "TJ", "PJ"];
+
+class Fuel {
+  constructor(name, col, row, item, category, value) {
+    this.name = name;
+    this.icon_col = col;
+    this.icon_row = row;
+    this.item = item;
+    this.category = category;
+    this.value = value;
+  }
+
+  valueString() {
+    let x = this.value;
+    const thousand = rational_1.RationalFromFloat(1000);
+    let i = 0;
+
+    while (thousand.less(x) && i < energySuffixes.length - 1) {
+      x = x.div(thousand);
+      i++;
+    }
+
+    return x.toUpDecimal(0) + " " + energySuffixes[i];
+  }
+
+}
+
+exports.Fuel = Fuel;
+
+function getFuel(data, items) {
+  const fuelCategories = {};
+
+  for (const fuelName of data.fuel) {
+    const d = data.items[fuelName];
+    const fuel = new Fuel(fuelName, d.icon_col, d.icon_row, item_1.getItem(data, items, fuelName), d.fuel_category, rational_1.RationalFromFloat(d.fuel_value));
+    let f = fuelCategories[fuel.category];
+
+    if (!f) {
+      f = [];
+      fuelCategories[fuel.category] = f;
+    }
+
+    f.push(fuel);
+  }
+
+  for (const category of Object.keys(fuelCategories)) {
+    fuelCategories[category].sort((a, b) => {
+      if (a.value.less(b.value)) {
+        return -1;
+      } else if (b.value.less(a.value)) {
+        return 1;
+      }
+
+      return 0;
+    });
+  }
+
+  return fuelCategories;
+}
+
+exports.getFuel = getFuel;
+
+},{"./item":45,"./rational":48}],43:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+const window_interface_1 = require("./window-interface");
 
 const tooltip_1 = require("./tooltip");
 
 const PX_WIDTH = 32;
 exports.PX_WIDTH = PX_WIDTH;
 const PX_HEIGHT = 32;
-exports.PX_HEIGHT = PX_HEIGHT;
-globals_1.IconState.sheet_hash = null;
+exports.PX_HEIGHT = PX_HEIGHT; // IconState.sheet_hash = null;
 
 class Sprite {
   constructor(name, col, row) {
@@ -34103,10 +34878,10 @@ function getImage(obj, suppressTooltip, tooltipTarget) {
   im.classList.add("icon");
   const x = -obj.icon_col * PX_WIDTH;
   const y = -obj.icon_row * PX_HEIGHT;
-  im.style.setProperty("background", "url(images/sprite-sheet-" + globals_1.IconState.sheet_hash + ".png)");
+  im.style.setProperty("background", "url(images/sprite-sheet-" + window_interface_1.IconState.sheet_hash + ".png)");
   im.style.setProperty("background-position", x + "px " + y + "px");
 
-  if (globals_1.SettingsState.tooltipsEnabled && obj.renderTooltip && !suppressTooltip) {
+  if (window_interface_1.SettingsState.tooltipsEnabled && obj.renderTooltip && !suppressTooltip) {
     addTooltip(im, obj, tooltipTarget);
   } else {
     im.title = obj.name;
@@ -34140,7 +34915,7 @@ function getExtraImage(name) {
 exports.getExtraImage = getExtraImage;
 
 function getSprites(data) {
-  globals_1.IconState.sheet_hash = data.sprites.hash;
+  window_interface_1.IconState.sheet_hash = data.sprites.hash;
   sprites = {};
 
   for (const name of Object.keys(data.sprites.extra)) {
@@ -34151,7 +34926,7 @@ function getSprites(data) {
 
 exports.getSprites = getSprites;
 
-},{"./globals":40,"./tooltip":46}],42:[function(require,module,exports){
+},{"./tooltip":54,"./window-interface":57}],44:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -34162,13 +34937,23 @@ const $ = require("jquery");
 
 const belt_1 = require("./belt");
 
-const globals_1 = require("./globals");
-
 const icon_1 = require("./icon");
+
+const module_1 = require("./module");
 
 const rational_1 = require("./rational");
 
-const settings_1 = require("./settings"); // postpone initing until the DOM has been fully loaded
+const settings_1 = require("./settings");
+
+const window_interface_1 = require("./window-interface");
+
+const factory_1 = require("./factory");
+
+const recipe_1 = require("./recipe");
+
+const fuel_1 = require("./fuel");
+
+const sort_1 = require("./sort"); // postpone initing until the DOM has been fully loaded
 
 
 const readyStateCheckInterval = setInterval(() => {
@@ -34177,31 +34962,31 @@ const readyStateCheckInterval = setInterval(() => {
     init();
   }
 }, 10);
-globals_1.InitState.recipeTable = null; // Contains collections of items and recipes. (solve.js)
+window_interface_1.InitState.recipeTable = null; // Contains collections of items and recipes. (solve.js)
 
-globals_1.InitState.solver = null; // Contains module and factory settings, as well as other settings. (factory.js)
+window_interface_1.InitState.solver = null; // Contains module and factory settings, as well as other settings. (factory.js)
 
-globals_1.InitState.spec = null; // Map from module name to Module object.
+window_interface_1.InitState.spec = null; // Map from module name to Module object.
 
-globals_1.InitState.modules = null; // Array of modules, sorted by 'order'.
+window_interface_1.InitState.modules = null; // Array of modules, sorted by 'order'.
 
-globals_1.InitState.sortedModules = null; // Map from short module name to Module object.
+window_interface_1.InitState.sortedModules = null; // Map from short module name to Module object.
 
-globals_1.InitState.shortModules = null; // Array of arrays of modules, separated by category and sorted.
+window_interface_1.InitState.shortModules = null; // Array of arrays of modules, separated by category and sorted.
 
-globals_1.InitState.moduleRows = null; // Array of Belt objects, sorted by speed.
+window_interface_1.InitState.moduleRows = null; // Array of Belt objects, sorted by speed.
 
-globals_1.InitState.belts = null; // Array of Fuel objects, sorted by value.
+window_interface_1.InitState.belts = null; // Array of Fuel objects, sorted by value.
 
-globals_1.InitState.fuel = null; // Array of item groups, in turn divided into subgroups. For display purposes.
+window_interface_1.InitState.fuel = null; // Array of item groups, in turn divided into subgroups. For display purposes.
 
-globals_1.InitState.itemGroups = null; // Boolean with whether to use old (0.16) calculations.
+window_interface_1.InitState.itemGroups = null; // Boolean with whether to use old (0.16) calculations.
 
-globals_1.InitState.useLegacyCalculations = false; // Size of the sprite sheet, as [x, y] array.
+window_interface_1.InitState.useLegacyCalculations = false; // Size of the sprite sheet, as [x, y] array.
 
-globals_1.InitState.spriteSheetSize = null;
-globals_1.InitState.initDone = false;
-globals_1.InitState.OVERRIDE = null; // Set the page back to a state immediately following initial setup, but before
+window_interface_1.InitState.spriteSheetSize = null;
+window_interface_1.InitState.initDone = false;
+window_interface_1.InitState.OVERRIDE = null; // Set the page back to a state immediately following initial setup, but before
 // the dataset is loaded for the first time.
 //
 // This is intended to be called when the top-level dataset is changed.
@@ -34209,7 +34994,7 @@ globals_1.InitState.OVERRIDE = null; // Set the page back to a state immediately
 
 function reset() {
   window.location.hash = "";
-  globals_1.window.build_targets = [];
+  window_interface_1.window.build_targets = [];
   const targetList = $("#targets");
   const plus = $("#targets").children(":last-child");
   const newTargetList = $('<ul id="targets" class="targets">');
@@ -34227,14 +35012,14 @@ exports.reset = reset;
 
 function loadDataRunner(modName, callback) {
   const xobj = new XMLHttpRequest();
-  let mod = globals_1.SettingsState.MODIFICATIONS[modName];
+  let mod = window_interface_1.SettingsState.MODIFICATIONS[modName];
 
   if (!mod) {
-    mod = globals_1.SettingsState.MODIFICATIONS[globals_1.SettingsState.DEFAULT_MODIFICATION];
+    mod = window_interface_1.SettingsState.MODIFICATIONS[window_interface_1.SettingsState.DEFAULT_MODIFICATION];
   }
 
-  globals_1.InitState.spriteSheetSize = mod.sheetSize;
-  globals_1.InitState.useLegacyCalculations = mod.legacy;
+  window_interface_1.InitState.spriteSheetSize = mod.sheetSize;
+  window_interface_1.InitState.useLegacyCalculations = mod.legacy;
   const filename = "data/" + mod.filename;
   xobj.overrideMimeType("application/json");
   xobj.open("GET", filename, true);
@@ -34250,7 +35035,7 @@ function loadDataRunner(modName, callback) {
 }
 
 function loadData(modName, settings) {
-  globals_1.InitState.recipeTable = new globals_1.window.RecipeTable($("#totals")[0]);
+  window_interface_1.InitState.recipeTable = new window_interface_1.window.RecipeTable($("#totals")[0]);
 
   if (!settings) {
     settings = {};
@@ -34258,49 +35043,49 @@ function loadData(modName, settings) {
 
   loadDataRunner(modName, function (data) {
     icon_1.getSprites(data);
-    const graph = globals_1.window.getRecipeGraph(data);
-    globals_1.InitState.modules = globals_1.window.getModules(data);
-    globals_1.InitState.sortedModules = globals_1.window.sorted(globals_1.InitState.modules, m => globals_1.InitState.modules[m].order);
-    globals_1.InitState.moduleRows = [];
+    const graph = recipe_1.getRecipeGraph(data);
+    window_interface_1.InitState.modules = module_1.getModules(data);
+    window_interface_1.InitState.sortedModules = sort_1.sorted(window_interface_1.InitState.modules, m => window_interface_1.InitState.modules[m].order);
+    window_interface_1.InitState.moduleRows = [];
     let category = null;
 
-    for (const moduleName of globals_1.InitState.sortedModules) {
-      const module = globals_1.InitState.modules[moduleName];
+    for (const moduleName of window_interface_1.InitState.sortedModules) {
+      const module = window_interface_1.InitState.modules[moduleName];
 
       if (module.category !== category) {
         category = module.category;
-        globals_1.InitState.moduleRows.push([]);
+        window_interface_1.InitState.moduleRows.push([]);
       }
 
-      globals_1.InitState.moduleRows[globals_1.InitState.moduleRows.length - 1].push(module);
+      window_interface_1.InitState.moduleRows[window_interface_1.InitState.moduleRows.length - 1].push(module);
     }
 
-    globals_1.InitState.shortModules = {};
+    window_interface_1.InitState.shortModules = {};
 
-    for (const moduleName in globals_1.InitState.modules) {
-      const module = globals_1.InitState.modules[moduleName];
-      globals_1.InitState.shortModules[module.shortName()] = module;
+    for (const moduleName in window_interface_1.InitState.modules) {
+      const module = window_interface_1.InitState.modules[moduleName];
+      window_interface_1.InitState.shortModules[module.shortName()] = module;
     }
 
-    const factories = globals_1.window.getFactories(data);
-    globals_1.InitState.spec = new globals_1.window.FactorySpec(factories);
+    const factories = factory_1.getFactories(data);
+    window_interface_1.InitState.spec = new factory_1.FactorySpec(factories);
 
     if ("ignore" in settings) {
       const ignore = settings.ignore.split(",");
 
       for (let i = 0; i < ignore.length; i++) {
-        globals_1.InitState.spec.ignore[ignore[i]] = true;
+        window_interface_1.InitState.spec.ignore[ignore[i]] = true;
       }
     }
 
     const items = graph[0];
     const recipes = graph[1];
-    globals_1.InitState.belts = belt_1.getBelts(data);
-    globals_1.InitState.fuel = globals_1.window.getFuel(data, items).chemical;
-    globals_1.InitState.itemGroups = globals_1.window.getItemGroups(items, data);
-    globals_1.InitState.solver = new globals_1.window.Solver(items, recipes);
+    window_interface_1.InitState.belts = belt_1.getBelts(data);
+    window_interface_1.InitState.fuel = fuel_1.getFuel(data, items).chemical;
+    window_interface_1.InitState.itemGroups = window_interface_1.window.getItemGroups(items, data);
+    window_interface_1.InitState.solver = new window_interface_1.window.Solver(items, recipes);
     settings_1.renderSettings(settings);
-    globals_1.InitState.solver.findSubgraphs(globals_1.InitState.spec);
+    window_interface_1.InitState.solver.findSubgraphs(window_interface_1.InitState.spec);
 
     if ("items" in settings && settings.items !== "") {
       const targets = settings.items.split(",");
@@ -34309,7 +35094,7 @@ function loadData(modName, settings) {
         const targetString = targets[i];
         const parts = targetString.split(":");
         const name = parts[0];
-        const target = globals_1.window.addTarget(name);
+        const target = window_interface_1.window.addTarget(name);
         const type = parts[1];
 
         if (type === "f") {
@@ -34330,7 +35115,7 @@ function loadData(modName, settings) {
         }
       }
     } else {
-      globals_1.window.addTarget();
+      window_interface_1.window.addTarget();
     }
 
     if ("modules" in settings && settings.modules !== "") {
@@ -34351,16 +35136,16 @@ function loadData(modName, settings) {
           if (moduleName) {
             let module;
 
-            if (moduleName in globals_1.InitState.modules) {
-              module = globals_1.InitState.modules[moduleName];
-            } else if (moduleName in globals_1.InitState.shortModules) {
-              module = globals_1.InitState.shortModules[moduleName];
+            if (moduleName in window_interface_1.InitState.modules) {
+              module = window_interface_1.InitState.modules[moduleName];
+            } else if (moduleName in window_interface_1.InitState.shortModules) {
+              module = window_interface_1.InitState.shortModules[moduleName];
             } else if (moduleName === "null") {
               module = null;
             }
 
             if (module !== undefined) {
-              globals_1.InitState.spec.setModule(recipe, j, module);
+              window_interface_1.InitState.spec.setModule(recipe, j, module);
             }
           }
         }
@@ -34370,15 +35155,15 @@ function loadData(modName, settings) {
           const moduleName = beaconSettingsSplit[0];
           let module;
 
-          if (moduleName in globals_1.InitState.modules) {
-            module = globals_1.InitState.modules[moduleName];
-          } else if (moduleName in globals_1.InitState.shortModules) {
-            module = globals_1.InitState.shortModules[moduleName];
+          if (moduleName in window_interface_1.InitState.modules) {
+            module = window_interface_1.InitState.modules[moduleName];
+          } else if (moduleName in window_interface_1.InitState.shortModules) {
+            module = window_interface_1.InitState.shortModules[moduleName];
           } else if (moduleName === "null") {
             module = null;
           }
 
-          const factory = globals_1.InitState.spec.getFactory(recipe);
+          const factory = window_interface_1.InitState.spec.getFactory(recipe);
 
           if (factory) {
             const count = rational_1.RationalFromFloat(Number(beaconSettingsSplit[1]));
@@ -34389,36 +35174,158 @@ function loadData(modName, settings) {
       }
     }
 
-    globals_1.InitState.initDone = true;
-    globals_1.window.itemUpdate(); // Prune factory spec after first solution is calculated.
+    window_interface_1.InitState.initDone = true;
+    window_interface_1.window.itemUpdate(); // Prune factory spec after first solution is calculated.
 
-    globals_1.window.pruneSpec(globals_1.window.globalTotals);
-    window.location.hash = "#" + globals_1.window.formatSettings();
+    window_interface_1.window.pruneSpec(window_interface_1.window.globalTotals);
+    window.location.hash = "#" + window_interface_1.window.formatSettings();
   });
 }
 
 exports.loadData = loadData;
 
 function init() {
-  const settings = globals_1.window.loadSettings(window.location.hash);
+  const settings = window_interface_1.window.loadSettings(window.location.hash);
 
-  if (globals_1.InitState.OVERRIDE !== null) {
-    settings_1.addOverrideOptions(globals_1.InitState.OVERRIDE);
+  if (window_interface_1.InitState.OVERRIDE !== null) {
+    settings_1.addOverrideOptions(window_interface_1.InitState.OVERRIDE);
   }
 
   settings_1.renderDataSetOptions(settings);
 
   if ("tab" in settings) {
-    globals_1.window.currentTab = settings.tab + "_tab";
+    window_interface_1.window.currentTab = settings.tab + "_tab";
   }
 
   loadData(settings_1.currentMod(), settings); // We don't need to call clickVisualize here, as we will properly render
   // the graph when we call itemUpdate() at the end of initialization.
 
-  globals_1.window.clickTab(globals_1.window.currentTab);
+  window_interface_1.window.clickTab(window_interface_1.window.currentTab);
 }
 
-},{"./belt":36,"./globals":40,"./icon":41,"./rational":44,"./settings":45,"jquery":34}],43:[function(require,module,exports){
+window_interface_1.initWindow();
+
+},{"./belt":36,"./factory":41,"./fuel":42,"./icon":43,"./module":47,"./rational":48,"./recipe":49,"./settings":50,"./sort":52,"./window-interface":57,"jquery":34}],45:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+const display_1 = require("./display");
+
+const icon_1 = require("./icon");
+
+const totals_1 = require("./totals");
+
+class Item {
+  constructor(name, col, row, phase, group, subgroup, order) {
+    this.name = name;
+    this.icon_col = col;
+    this.icon_row = row;
+    this.recipes = [];
+    this.uses = [];
+    this.phase = phase;
+    this.group = group;
+    this.subgroup = subgroup;
+    this.order = order;
+  }
+
+  addRecipe(recipe) {
+    this.recipes.push(recipe);
+  }
+
+  addUse(recipe) {
+    this.uses.push(recipe);
+  }
+
+  isWeird() {
+    return this.recipes.length > 1 || this.recipes[0].solveGroup !== null;
+  }
+
+  produce(rate, ignore, spec) {
+    const totals = new totals_1.Totals(rate, this);
+
+    if (this.isWeird()) {
+      totals.addUnfinished(this.name, rate);
+      return totals;
+    }
+
+    const recipe = this.recipes[0];
+    const gives = recipe.gives(this, spec);
+    rate = rate.div(gives);
+    totals.add(recipe.name, rate);
+
+    if (ignore[recipe.name]) {
+      return totals;
+    }
+
+    const ingredients = recipe.ingredients.concat(recipe.fuelIngredient(spec));
+
+    for (const ing of ingredients) {
+      const subTotals = ing.item.produce(rate.mul(ing.amount), ignore, spec);
+      totals.combine(subTotals);
+    }
+
+    return totals;
+  }
+
+  renderTooltip(extra) {
+    if (this.recipes.length === 1 && this.recipes[0].name === this.name) {
+      return this.recipes[0].renderTooltip(extra);
+    }
+
+    const t = document.createElement("div");
+    t.classList.add("frame");
+    const title = document.createElement("h3");
+    const im = icon_1.getImage(this, true);
+    title.appendChild(im);
+    title.appendChild(new Text(display_1.formatName(this.name)));
+    t.appendChild(title);
+
+    if (extra) {
+      t.appendChild(extra);
+    }
+
+    return t;
+  }
+
+}
+
+exports.Item = Item;
+
+function getItem(data, items, name) {
+  if (name in items) {
+    return items[name];
+  } else {
+    const d = data.items[name];
+    let phase;
+
+    if (d.type === "fluid") {
+      phase = "fluid";
+    } else {
+      phase = "solid";
+    }
+
+    const item = new Item(name, d.icon_col, d.icon_row, phase, d.group, d.subgroup, d.order);
+    items[name] = item;
+    return item;
+  }
+}
+
+exports.getItem = getItem;
+
+function getItems(data) {
+  const items = {};
+  const cycleName = "nuclear-reactor-cycle";
+  const reactor = data.items["nuclear-reactor"];
+  items[cycleName] = new Item(cycleName, reactor.icon_col, reactor.icon_row, "abstract", "production", "energy", "f[nuclear-energy]-d[reactor-cycle]");
+  return items;
+}
+
+exports.getItems = getItems;
+
+},{"./display":39,"./icon":43,"./totals":55}],46:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -34646,7 +35553,215 @@ class Matrix {
 
 exports.Matrix = Matrix;
 
-},{"./rational":44}],44:[function(require,module,exports){
+},{"./rational":48}],47:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+const d3 = require("d3");
+
+const display_1 = require("./display");
+
+const dropdown_1 = require("./dropdown");
+
+const icon_1 = require("./icon");
+
+const rational_1 = require("./rational");
+
+const window_interface_1 = require("./window-interface");
+
+class Module {
+  constructor(name, col, row, category, order, productivity, speed, power, limit) {
+    // Other module effects not modeled by this calculator.
+    this.name = name;
+    this.icon_col = col;
+    this.icon_row = row;
+    this.category = category;
+    this.order = order;
+    this.productivity = productivity;
+    this.speed = speed;
+    this.power = power;
+    this.limit = {};
+
+    if (limit) {
+      for (const limitIndex of limit) {
+        this.limit[limitIndex] = true;
+      }
+    }
+  }
+
+  shortName() {
+    return this.name[0] + this.name[this.name.length - 1];
+  }
+
+  canUse(recipe) {
+    if (recipe.allModules()) {
+      return true;
+    }
+
+    if (Object.keys(this.limit).length > 0) {
+      return recipe.name in this.limit;
+    }
+
+    return true;
+  }
+
+  canBeacon() {
+    return this.productivity.isZero();
+  }
+
+  hasProdEffect() {
+    return !this.productivity.isZero();
+  }
+
+  renderTooltip() {
+    const t = document.createElement("div");
+    t.classList.add("frame");
+    const title = document.createElement("h3");
+    const im = icon_1.getImage(this, true);
+    title.appendChild(im);
+    title.appendChild(new Text(display_1.formatName(this.name)));
+    t.appendChild(title);
+    let b;
+    const hundred = rational_1.RationalFromFloat(100);
+    let first = false;
+
+    if (!this.power.isZero()) {
+      const power = this.power.mul(hundred);
+
+      if (first) {
+        t.appendChild(document.createElement("br"));
+      } else {
+        first = true;
+      }
+
+      b = document.createElement("b");
+      b.textContent = "Energy consumption: ";
+      t.appendChild(b);
+      let sign = "";
+
+      if (!this.power.less(rational_1.zero)) {
+        sign = "+";
+      }
+
+      t.appendChild(new Text(sign + power.toDecimal() + "%"));
+    }
+
+    if (!this.speed.isZero()) {
+      const speed = this.speed.mul(hundred);
+
+      if (first) {
+        t.appendChild(document.createElement("br"));
+      } else {
+        first = true;
+      }
+
+      b = document.createElement("b");
+      b.textContent = "Speed: ";
+      t.appendChild(b);
+      let sign = "";
+
+      if (!this.speed.less(rational_1.zero)) {
+        sign = "+";
+      }
+
+      t.appendChild(new Text(sign + speed.toDecimal() + "%"));
+    }
+
+    if (!this.productivity.isZero()) {
+      const productivity = this.productivity.mul(hundred);
+
+      if (first) {
+        t.appendChild(document.createElement("br"));
+      } else {
+        first = true;
+      }
+
+      b = document.createElement("b");
+      b.textContent = "Productivity: ";
+      t.appendChild(b);
+      let sign = "";
+
+      if (!this.productivity.less(rational_1.zero)) {
+        sign = "+";
+      }
+
+      t.appendChild(new Text(sign + productivity.toDecimal() + "%"));
+    }
+
+    return t;
+  }
+
+}
+
+exports.Module = Module;
+
+function moduleDropdown(selection, name, selected, callback, filter) {
+  const rows = [[null]].concat(window_interface_1.InitState.moduleRows);
+  const dropdown = dropdown_1.makeDropdown(selection);
+  let options = dropdown.selectAll("div").data(rows).join("div").selectAll("span").data(d => d).join("span");
+
+  if (filter) {
+    options = options.filter(filter);
+  }
+
+  const labels = dropdown_1.addInputs(options, name, selected, callback);
+  labels.append(d => {
+    if (d === null) {
+      const noModImage = icon_1.getExtraImage("slot_icon_module");
+      noModImage.title = display_1.NO_MODULE;
+      return noModImage;
+    } else {
+      return icon_1.getImage(d, false, dropdown.node());
+    }
+  });
+  const inputs = {};
+  options.each(function (d) {
+    const element = d3.select(this).select('input[type="radio"]').node();
+
+    if (d === null) {
+      inputs[display_1.NO_MODULE] = element;
+    } else {
+      inputs[d.name] = element;
+    }
+  });
+  return {
+    dropdown: dropdown.node(),
+    inputs
+  };
+}
+
+exports.moduleDropdown = moduleDropdown;
+
+function getModules(data) {
+  const modules = {};
+
+  for (const name of data.modules) {
+    const item = data.items[name];
+    const effect = item.effect;
+    const category = item.category;
+    const order = item.order;
+    const speed = rational_1.RationalFromFloat((effect.speed || {
+      bonus: 0
+    }).bonus || 0);
+    const productivity = rational_1.RationalFromFloat((effect.productivity || {
+      bonus: 0
+    }).bonus || 0);
+    const power = rational_1.RationalFromFloat((effect.consumption || {
+      bonus: 0
+    }).bonus || 0);
+    const limit = item.limitation;
+    modules[name] = new Module(name, item.icon_col, item.icon_row, category, order, productivity, speed, power, limit);
+  }
+
+  return modules;
+}
+
+exports.getModules = getModules;
+
+},{"./display":39,"./dropdown":40,"./icon":43,"./rational":48,"./window-interface":57,"d3":33}],48:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -34895,7 +36010,323 @@ exports.oneThird = oneThird;
 const twoThirds = new Rational(bigInt(2), bigInt(3));
 exports.twoThirds = twoThirds;
 
-},{"big-integer":1}],45:[function(require,module,exports){
+},{"big-integer":1}],49:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+const display_1 = require("./display");
+
+const icon_1 = require("./icon");
+
+const item_1 = require("./item");
+
+const rational_1 = require("./rational");
+
+const window_interface_1 = require("./window-interface");
+
+class Ingredient {
+  constructor(amount, item) {
+    this.amount = amount;
+    this.item = item;
+  }
+
+}
+
+exports.Ingredient = Ingredient;
+
+function makeIngredient(data, i, items) {
+  let name;
+
+  if ("name" in i) {
+    name = i.name;
+  } else {
+    name = i[0];
+  }
+
+  let amount;
+
+  if ("amount" in i) {
+    amount = i.amount;
+  } else if ("amount_min" in i && "amount_max" in i) {
+    amount = (i.amount_min + i.amount_max) / 2;
+  } else {
+    amount = i[1];
+  }
+
+  amount *= i.probability || 1;
+  return new Ingredient(rational_1.RationalFromFloat(amount), item_1.getItem(data, items, name));
+}
+
+class Recipe {
+  constructor(name, col, row, category, time, ingredients, products) {
+    this.name = name;
+    this.icon_col = col;
+    this.icon_row = row;
+    this.category = category;
+    this.time = time;
+    this.ingredients = ingredients;
+
+    for (const ingredient of ingredients) {
+      ingredient.item.addUse(this);
+    }
+
+    this.products = products;
+
+    for (const product of products) {
+      product.item.addRecipe(this);
+    }
+
+    this.displayGroup = null;
+    this.solveGroup = null;
+  }
+
+  gives(item, spec) {
+    const factory = spec.getFactory(this);
+    let prod = rational_1.one;
+
+    if (factory) {
+      prod = factory.prodEffect(spec);
+    }
+
+    for (const product of this.products) {
+      if (product.item.name === item.name) {
+        return product.amount.mul(prod);
+      }
+    }
+  }
+
+  fuelIngredient(spec) {
+    const factory = spec.getFactory(this);
+
+    if (!factory || !factory.factory.fuel || factory.factory.fuel !== "chemical") {
+      return [];
+    }
+
+    const basePower = factory.powerUsage(spec, rational_1.one).power;
+    const baseRate = factory.recipeRate(spec, this);
+    const perItemEnergy = basePower.div(baseRate);
+    const fuelAmount = perItemEnergy.div(window_interface_1.SettingsState.preferredFuel.value);
+    return [new Ingredient(fuelAmount, window_interface_1.SettingsState.preferredFuel.item)];
+  }
+
+  getIngredients(spec) {
+    return this.ingredients.concat(this.fuelIngredient(spec));
+  }
+
+  makesResource() {
+    return false;
+  }
+
+  allModules() {
+    return false;
+  }
+
+  canIgnore() {
+    if (this.ingredients.length === 0) {
+      return false;
+    }
+
+    for (const product of this.products) {
+      if (product.item.isWeird()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  renderTooltip(extra) {
+    const t = document.createElement("div");
+    t.classList.add("frame");
+    const title = document.createElement("h3");
+    const im = icon_1.getImage(this, true);
+    title.appendChild(im);
+    let name = display_1.formatName(this.name);
+
+    if (this.products.length === 1 && this.products[0].item.name === this.name && rational_1.one.less(this.products[0].amount)) {
+      name = this.products[0].amount.toDecimal() + " \u00d7 " + name;
+    }
+
+    title.appendChild(new Text("\u00A0" + name));
+    t.appendChild(title);
+
+    if (extra) {
+      t.appendChild(extra);
+    }
+
+    if (this.ingredients.length === 0) {
+      return t;
+    }
+
+    if (this.products.length > 1 || this.products[0].item.name !== this.name) {
+      t.appendChild(new Text("Products: "));
+
+      for (const ing of this.products) {
+        const p = document.createElement("div");
+        p.classList.add("product");
+        p.appendChild(icon_1.getImage(ing.item, true));
+        const count = document.createElement("span");
+        count.classList.add("count");
+        count.textContent = ing.amount.toDecimal();
+        p.appendChild(count);
+        t.appendChild(p);
+        t.appendChild(new Text("\u00A0"));
+      }
+
+      t.appendChild(document.createElement("br"));
+    }
+
+    const time = document.createElement("div");
+    time.classList.add("product");
+    time.appendChild(icon_1.getExtraImage("clock"));
+    t.appendChild(time);
+    t.appendChild(new Text("\u00A0" + this.time.toDecimal()));
+
+    for (const ing of this.ingredients) {
+      t.appendChild(document.createElement("br"));
+      const p = document.createElement("div");
+      p.classList.add("product");
+      p.appendChild(icon_1.getImage(ing.item, true));
+      t.appendChild(p);
+      t.appendChild(new Text("\u00A0" + ing.amount.toDecimal() + " \u00d7 " + display_1.formatName(ing.item.name)));
+    }
+
+    return t;
+  }
+
+}
+
+exports.Recipe = Recipe;
+
+function makeRecipe(data, d, items) {
+  const time = rational_1.RationalFromFloat(d.energy_required);
+  const products = [];
+
+  for (const result of d.results) {
+    products.push(makeIngredient(data, result, items));
+  }
+
+  const ingredients = [];
+
+  for (const ingredient of d.ingredients) {
+    ingredients.push(makeIngredient(data, ingredient, items));
+  }
+
+  return new Recipe(d.name, d.icon_col, d.icon_row, d.category, time, ingredients, products);
+}
+
+class ResourceRecipe extends Recipe {
+  constructor(item) {
+    super(item.name, item.icon_col, item.icon_row, null, rational_1.zero, [], [new Ingredient(rational_1.one, item)]);
+  }
+
+  makesResource() {
+    return true;
+  }
+
+}
+
+class MiningRecipe extends Recipe {
+  constructor(name, col, row, category, hardness, mining_time, ingredients, products) {
+    super(name, col, row, category, rational_1.zero, ingredients || [], products);
+    this.hardness = hardness;
+    this.mining_time = mining_time;
+  }
+
+  makesResource() {
+    return true;
+  }
+
+  allModules() {
+    return true;
+  }
+
+}
+
+exports.MiningRecipe = MiningRecipe;
+
+function ignoreRecipe(d) {
+  return d.subgroup === "empty-barrel";
+}
+
+function getRecipeGraph(data) {
+  const recipes = {};
+  const items = item_1.getItems(data);
+  const water = item_1.getItem(data, items, "water");
+  recipes.water = new Recipe("water", water.icon_col, water.icon_row, "water", rational_1.RationalFromFloats(1, 1200), [], [new Ingredient(rational_1.one, water)]);
+  const reactor = data.items["nuclear-reactor"];
+  recipes["nuclear-reactor-cycle"] = new Recipe("nuclear-reactor-cycle", reactor.icon_col, reactor.icon_row, "nuclear", rational_1.RationalFromFloat(200), [new Ingredient(rational_1.one, item_1.getItem(data, items, "uranium-fuel-cell"))], [new Ingredient(rational_1.one, item_1.getItem(data, items, "used-up-uranium-fuel-cell")), new Ingredient(rational_1.one, items["nuclear-reactor-cycle"])]);
+  const rocket = data.items["rocket-silo"];
+  recipes["rocket-launch"] = new Recipe("rocket-launch", rocket.icon_col, rocket.icon_row, "rocket-launch", rational_1.one, [new Ingredient(rational_1.RationalFromFloat(100), item_1.getItem(data, items, "rocket-part")), new Ingredient(rational_1.one, item_1.getItem(data, items, "satellite"))], [new Ingredient(rational_1.RationalFromFloat(1000), item_1.getItem(data, items, "space-science-pack"))]);
+  const steam = data.items.steam;
+  recipes.steam = new Recipe("steam", steam.icon_col, steam.icon_row, "boiler", rational_1.RationalFromFloats(1, 60), [new Ingredient(rational_1.one, item_1.getItem(data, items, "water"))], [new Ingredient(rational_1.one, item_1.getItem(data, items, "steam"))]);
+
+  for (const name of Object.keys(data.recipes)) {
+    const recipe = data.recipes[name];
+
+    if (ignoreRecipe(recipe)) {
+      continue;
+    }
+
+    const r = makeRecipe(data, recipe, items);
+    recipes[recipe.name] = r;
+  }
+
+  for (const entityName of Object.keys(data.resource)) {
+    const entity = data.resource[entityName];
+    let category = entity.category;
+
+    if (!category) {
+      category = "basic-solid";
+    }
+
+    if (category !== "basic-solid") {
+      continue;
+    }
+
+    const name = entity.name;
+    const props = entity.minable;
+    let ingredients = null;
+
+    if ("required_fluid" in props) {
+      ingredients = [new Ingredient(rational_1.RationalFromFloat(props.fluid_amount / 10), items[props.required_fluid])];
+    }
+
+    const products = [];
+
+    for (const result of props.results) {
+      products.push(makeIngredient(data, result, items));
+    }
+
+    let hardness;
+
+    if (props.hardness) {
+      hardness = rational_1.RationalFromFloat(props.hardness);
+    } else {
+      hardness = null;
+    }
+
+    recipes[name] = new MiningRecipe(name, entity.icon_col, entity.icon_row, "mining-" + category, hardness, rational_1.RationalFromFloat(props.mining_time), ingredients, products);
+  }
+
+  for (const itemName of Object.keys(items)) {
+    const item = items[itemName];
+
+    if (item.recipes.length === 0) {
+      const r = new ResourceRecipe(item);
+      recipes[r.name] = r;
+    }
+  }
+
+  return [items, recipes];
+}
+
+exports.getRecipeGraph = getRecipeGraph;
+
+},{"./display":39,"./icon":43,"./item":45,"./rational":48,"./window-interface":57}],50:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -34908,11 +36339,13 @@ const color_1 = require("./color");
 
 const dropdown_1 = require("./dropdown");
 
-const globals_1 = require("./globals");
-
 const icon_1 = require("./icon");
 
+const module_1 = require("./module");
+
 const rational_1 = require("./rational");
+
+const window_interface_1 = require("./window-interface");
 
 class Modification {
   constructor(name, filename, legacy, sheetSize) {
@@ -34935,7 +36368,7 @@ class Oil {
 }
 
 exports.Oil = Oil;
-globals_1.SettingsState.MODIFICATIONS = {
+window_interface_1.SettingsState.MODIFICATIONS = {
   "0-16-51": new Modification("Vanilla 0.16.51", "vanilla-0.16.51.json", true, [480, 512]),
   "0-16-51x": new Modification("Vanilla 0.16.51 - Expensive", "vanilla-0.16.51-expensive.json", true, [480, 512]),
   "0-17-1": new Modification("Vanilla 0.17.1", "vanilla-0.17.1.json", false, [480, 512]),
@@ -34943,44 +36376,44 @@ globals_1.SettingsState.MODIFICATIONS = {
   "017science": new Modification("0.16.51 w/ 0.17 science mod", "017science-0.16.51.json", true, [480, 512]),
   "bobs-0-16-51": new Modification("(EXPERIMENTAL) Bob's Mods + base 0.16.51", "bobs-0.16.51.json", true, [800, 832])
 };
-globals_1.SettingsState.DEFAULT_MODIFICATION = "0-16-51"; // Ideally we'd write this as a generalized function, but for now we can hard-
+window_interface_1.SettingsState.DEFAULT_MODIFICATION = "0-16-51"; // Ideally we'd write this as a generalized function, but for now we can hard-
 // code these version upgrades.
 
-globals_1.SettingsState.modUpdates = {
+window_interface_1.SettingsState.modUpdates = {
   "0-16-37": "0-16-51",
   "0-16-37x": "0-16-51x",
   "bobs-0-16-37": "bobs-0-16-51"
 };
-globals_1.SettingsState.DEFAULT_COLOR_SCHEME = "default";
-globals_1.SettingsState.colorScheme = null;
-globals_1.SettingsState.seconds = rational_1.one;
-globals_1.SettingsState.minutes = rational_1.RationalFromFloat(60);
-globals_1.SettingsState.hours = rational_1.RationalFromFloat(3600);
-globals_1.SettingsState.displayRates = {
-  h: globals_1.SettingsState.hours,
-  m: globals_1.SettingsState.minutes,
-  s: globals_1.SettingsState.seconds
+window_interface_1.SettingsState.DEFAULT_COLOR_SCHEME = "default";
+window_interface_1.SettingsState.colorScheme = null;
+window_interface_1.SettingsState.seconds = rational_1.one;
+window_interface_1.SettingsState.minutes = rational_1.RationalFromFloat(60);
+window_interface_1.SettingsState.hours = rational_1.RationalFromFloat(3600);
+window_interface_1.SettingsState.displayRates = {
+  h: window_interface_1.SettingsState.hours,
+  m: window_interface_1.SettingsState.minutes,
+  s: window_interface_1.SettingsState.seconds
 };
-globals_1.SettingsState.longRateNames = {
+window_interface_1.SettingsState.longRateNames = {
   h: "hour",
   m: "minute",
   s: "second"
 };
-globals_1.SettingsState.DEFAULT_RATE = "m";
-globals_1.SettingsState.displayRateFactor = globals_1.SettingsState.displayRates[globals_1.SettingsState.DEFAULT_RATE];
-globals_1.SettingsState.rateName = globals_1.SettingsState.DEFAULT_RATE;
-globals_1.SettingsState.DEFAULT_RATE_PRECISION = 3;
-globals_1.SettingsState.ratePrecision = globals_1.SettingsState.DEFAULT_RATE_PRECISION;
-globals_1.SettingsState.DEFAULT_COUNT_PRECISION = 1;
-globals_1.SettingsState.countPrecision = globals_1.SettingsState.DEFAULT_COUNT_PRECISION;
-globals_1.SettingsState.DEFAULT_MINIMUM = "1";
-globals_1.SettingsState.minimumAssembler = globals_1.SettingsState.DEFAULT_MINIMUM;
-globals_1.SettingsState.DEFAULT_FURNACE = null;
-globals_1.SettingsState.DEFAULT_FUEL = "coal";
-globals_1.SettingsState.preferredFuel = null;
-globals_1.SettingsState.OIL_OPTIONS = [new Oil("advanced-oil-processing", "default"), new Oil("basic-oil-processing", "basic"), new Oil("coal-liquefaction", "coal")];
-globals_1.SettingsState.DEFAULT_OIL = "default";
-globals_1.SettingsState.OIL_EXCLUSION = {
+window_interface_1.SettingsState.DEFAULT_RATE = "m";
+window_interface_1.SettingsState.displayRateFactor = window_interface_1.SettingsState.displayRates[window_interface_1.SettingsState.DEFAULT_RATE];
+window_interface_1.SettingsState.rateName = window_interface_1.SettingsState.DEFAULT_RATE;
+window_interface_1.SettingsState.DEFAULT_RATE_PRECISION = 3;
+window_interface_1.SettingsState.ratePrecision = window_interface_1.SettingsState.DEFAULT_RATE_PRECISION;
+window_interface_1.SettingsState.DEFAULT_COUNT_PRECISION = 1;
+window_interface_1.SettingsState.countPrecision = window_interface_1.SettingsState.DEFAULT_COUNT_PRECISION;
+window_interface_1.SettingsState.DEFAULT_MINIMUM = "1";
+window_interface_1.SettingsState.minimumAssembler = window_interface_1.SettingsState.DEFAULT_MINIMUM;
+window_interface_1.SettingsState.DEFAULT_FURNACE = null;
+window_interface_1.SettingsState.DEFAULT_FUEL = "coal";
+window_interface_1.SettingsState.preferredFuel = null;
+window_interface_1.SettingsState.OIL_OPTIONS = [new Oil("advanced-oil-processing", "default"), new Oil("basic-oil-processing", "basic"), new Oil("coal-liquefaction", "coal")];
+window_interface_1.SettingsState.DEFAULT_OIL = "default";
+window_interface_1.SettingsState.OIL_EXCLUSION = {
   basic: {
     "advanced-oil-processing": true
   },
@@ -34990,46 +36423,46 @@ globals_1.SettingsState.OIL_EXCLUSION = {
   },
   default: {}
 };
-globals_1.SettingsState.oilGroup = globals_1.SettingsState.DEFAULT_OIL;
-globals_1.SettingsState.DEFAULT_KOVAREX = true;
-globals_1.SettingsState.kovarexEnabled = false;
-globals_1.SettingsState.DEFAULT_BELT = "transport-belt";
-globals_1.SettingsState.preferredBelt = globals_1.SettingsState.DEFAULT_BELT;
-globals_1.SettingsState.preferredBeltSpeed = null;
-globals_1.SettingsState.DEFAULT_PIPE = rational_1.RationalFromFloat(17);
-globals_1.SettingsState.minPipeLength = globals_1.SettingsState.DEFAULT_PIPE;
-globals_1.SettingsState.maxPipeThroughput = null;
-globals_1.SettingsState.DEFAULT_MINING_PROD = "0";
-globals_1.SettingsState.DEFAULT_VISUALIZER = "sankey";
-globals_1.SettingsState.visualizer = globals_1.SettingsState.DEFAULT_VISUALIZER;
-globals_1.SettingsState.DEFAULT_DIRECTION = "right";
-globals_1.SettingsState.visDirection = globals_1.SettingsState.DEFAULT_DIRECTION;
-globals_1.SettingsState.DEFAULT_NODE_BREADTH = 175;
-globals_1.SettingsState.maxNodeHeight = globals_1.SettingsState.DEFAULT_NODE_BREADTH;
-globals_1.SettingsState.DEFAULT_LINK_LENGTH = 200;
-globals_1.SettingsState.linkLength = globals_1.SettingsState.DEFAULT_LINK_LENGTH;
-globals_1.SettingsState.DEFAULT_FORMAT = "decimal";
-globals_1.SettingsState.displayFormat = globals_1.SettingsState.DEFAULT_FORMAT;
-globals_1.SettingsState.displayFormats = {
+window_interface_1.SettingsState.oilGroup = window_interface_1.SettingsState.DEFAULT_OIL;
+window_interface_1.SettingsState.DEFAULT_KOVAREX = true;
+window_interface_1.SettingsState.kovarexEnabled = false;
+window_interface_1.SettingsState.DEFAULT_BELT = "transport-belt";
+window_interface_1.SettingsState.preferredBelt = window_interface_1.SettingsState.DEFAULT_BELT;
+window_interface_1.SettingsState.preferredBeltSpeed = null;
+window_interface_1.SettingsState.DEFAULT_PIPE = rational_1.RationalFromFloat(17);
+window_interface_1.SettingsState.minPipeLength = window_interface_1.SettingsState.DEFAULT_PIPE;
+window_interface_1.SettingsState.maxPipeThroughput = null;
+window_interface_1.SettingsState.DEFAULT_MINING_PROD = "0";
+window_interface_1.SettingsState.DEFAULT_VISUALIZER = "sankey";
+window_interface_1.SettingsState.visualizer = window_interface_1.SettingsState.DEFAULT_VISUALIZER;
+window_interface_1.SettingsState.DEFAULT_DIRECTION = "right";
+window_interface_1.SettingsState.visDirection = window_interface_1.SettingsState.DEFAULT_DIRECTION;
+window_interface_1.SettingsState.DEFAULT_NODE_BREADTH = 175;
+window_interface_1.SettingsState.maxNodeHeight = window_interface_1.SettingsState.DEFAULT_NODE_BREADTH;
+window_interface_1.SettingsState.DEFAULT_LINK_LENGTH = 200;
+window_interface_1.SettingsState.linkLength = window_interface_1.SettingsState.DEFAULT_LINK_LENGTH;
+window_interface_1.SettingsState.DEFAULT_FORMAT = "decimal";
+window_interface_1.SettingsState.displayFormat = window_interface_1.SettingsState.DEFAULT_FORMAT;
+window_interface_1.SettingsState.displayFormats = {
   d: "decimal",
   r: "rational"
 };
-globals_1.SettingsState.DEFAULT_TOOLTIP = true;
-globals_1.SettingsState.tooltipsEnabled = globals_1.SettingsState.DEFAULT_TOOLTIP;
-globals_1.SettingsState.DEFAULT_DEBUG = false;
-globals_1.SettingsState.showDebug = globals_1.SettingsState.DEFAULT_DEBUG;
+window_interface_1.SettingsState.DEFAULT_TOOLTIP = true;
+window_interface_1.SettingsState.tooltipsEnabled = window_interface_1.SettingsState.DEFAULT_TOOLTIP;
+window_interface_1.SettingsState.DEFAULT_DEBUG = false;
+window_interface_1.SettingsState.showDebug = window_interface_1.SettingsState.DEFAULT_DEBUG;
 
 function addOverrideOptions(version) {
   const tag = "local-" + version.replace(/\./g, "-");
-  globals_1.SettingsState.MODIFICATIONS[tag] = new Modification("Local game data " + version, "local-" + version + ".json");
-  globals_1.SettingsState.MODIFICATIONS[tag + "x"] = new Modification("Local game data " + version + " - Expensive", "local-" + version + "-expensive.json");
-  globals_1.SettingsState.DEFAULT_MODIFICATION = tag;
+  window_interface_1.SettingsState.MODIFICATIONS[tag] = new Modification("Local game data " + version, "local-" + version + ".json");
+  window_interface_1.SettingsState.MODIFICATIONS[tag + "x"] = new Modification("Local game data " + version + " - Expensive", "local-" + version + "-expensive.json");
+  window_interface_1.SettingsState.DEFAULT_MODIFICATION = tag;
 }
 
 exports.addOverrideOptions = addOverrideOptions;
 
 function normalizeDataSetName(modName) {
-  const newName = globals_1.SettingsState.modUpdates[modName];
+  const newName = window_interface_1.SettingsState.modUpdates[modName];
 
   if (newName) {
     return newName;
@@ -35038,19 +36471,17 @@ function normalizeDataSetName(modName) {
   return modName;
 }
 
-exports.normalizeDataSetName = normalizeDataSetName;
-
 function renderDataSetOptions(settings) {
   const modSelector = document.getElementById("data_set");
   const configuredMod = normalizeDataSetName(settings.data);
 
-  for (const modName in globals_1.SettingsState.MODIFICATIONS) {
-    const mod = globals_1.SettingsState.MODIFICATIONS[modName];
+  for (const modName in window_interface_1.SettingsState.MODIFICATIONS) {
+    const mod = window_interface_1.SettingsState.MODIFICATIONS[modName];
     const option = document.createElement("option");
     option.textContent = mod.name;
     option.value = modName;
 
-    if (configuredMod && configuredMod === modName || !configuredMod && modName === globals_1.SettingsState.DEFAULT_MODIFICATION) {
+    if (configuredMod && configuredMod === modName || !configuredMod && modName === window_interface_1.SettingsState.DEFAULT_MODIFICATION) {
       option.selected = true;
     }
 
@@ -35068,7 +36499,7 @@ function currentMod() {
 exports.currentMod = currentMod;
 
 function renderColorScheme(settings) {
-  let color = globals_1.SettingsState.DEFAULT_COLOR_SCHEME;
+  let color = window_interface_1.SettingsState.DEFAULT_COLOR_SCHEME;
 
   if ("c" in settings) {
     color = settings.c;
@@ -35093,13 +36524,11 @@ function renderColorScheme(settings) {
   }
 }
 
-exports.renderColorScheme = renderColorScheme;
-
 function setColorScheme(schemeName) {
   for (let i = 0; i < color_1.colorSchemes.length; i++) {
     if (color_1.colorSchemes[i].name === schemeName) {
-      globals_1.SettingsState.colorScheme = color_1.colorSchemes[i];
-      globals_1.SettingsState.colorScheme.apply();
+      window_interface_1.SettingsState.colorScheme = color_1.colorSchemes[i];
+      window_interface_1.SettingsState.colorScheme.apply();
       return;
     }
   }
@@ -35108,35 +36537,35 @@ function setColorScheme(schemeName) {
 exports.setColorScheme = setColorScheme;
 
 function renderRateOptions(settings) {
-  globals_1.SettingsState.rateName = globals_1.SettingsState.DEFAULT_RATE;
+  window_interface_1.SettingsState.rateName = window_interface_1.SettingsState.DEFAULT_RATE;
 
   if ("rate" in settings) {
-    globals_1.SettingsState.rateName = settings.rate;
+    window_interface_1.SettingsState.rateName = settings.rate;
   }
 
-  globals_1.SettingsState.displayRateFactor = globals_1.SettingsState.displayRates[globals_1.SettingsState.rateName];
+  window_interface_1.SettingsState.displayRateFactor = window_interface_1.SettingsState.displayRates[window_interface_1.SettingsState.rateName];
   const oldNode = document.getElementById("display_rate");
   const cell = oldNode.parentNode;
   const node = document.createElement("form");
   node.id = "display_rate";
 
-  for (const name in globals_1.SettingsState.displayRates) {
-    const rate = globals_1.SettingsState.displayRates[name];
+  for (const name in window_interface_1.SettingsState.displayRates) {
+    const rate = window_interface_1.SettingsState.displayRates[name];
     const input = document.createElement("input");
     input.id = name + "_rate";
     input.type = "radio";
     input.name = "rate";
     input.value = name;
 
-    if (rate.equal(globals_1.SettingsState.displayRateFactor)) {
+    if (rate.equal(window_interface_1.SettingsState.displayRateFactor)) {
       input.checked = true;
     }
 
-    input.addEventListener("change", globals_1.window.displayRateHandler);
+    input.addEventListener("change", window_interface_1.window.displayRateHandler);
     node.appendChild(input);
     const label = document.createElement("label");
     label.htmlFor = name + "_rate";
-    label.textContent = "items/" + globals_1.SettingsState.longRateNames[name];
+    label.textContent = "items/" + window_interface_1.SettingsState.longRateNames[name];
     node.appendChild(label);
     node.appendChild(document.createElement("br"));
   }
@@ -35144,35 +36573,31 @@ function renderRateOptions(settings) {
   cell.replaceChild(node, oldNode);
 }
 
-exports.renderRateOptions = renderRateOptions;
-
 function renderPrecisions(settings) {
-  globals_1.SettingsState.ratePrecision = globals_1.SettingsState.DEFAULT_RATE_PRECISION;
+  window_interface_1.SettingsState.ratePrecision = window_interface_1.SettingsState.DEFAULT_RATE_PRECISION;
 
   if ("rp" in settings) {
-    globals_1.SettingsState.ratePrecision = Number(settings.rp);
+    window_interface_1.SettingsState.ratePrecision = Number(settings.rp);
   }
 
-  document.getElementById("rprec").value = String(globals_1.SettingsState.ratePrecision);
-  globals_1.SettingsState.countPrecision = globals_1.SettingsState.DEFAULT_COUNT_PRECISION;
+  document.getElementById("rprec").value = String(window_interface_1.SettingsState.ratePrecision);
+  window_interface_1.SettingsState.countPrecision = window_interface_1.SettingsState.DEFAULT_COUNT_PRECISION;
 
   if ("cp" in settings) {
-    globals_1.SettingsState.countPrecision = Number(settings.cp);
+    window_interface_1.SettingsState.countPrecision = Number(settings.cp);
   }
 
-  document.getElementById("fprec").value = String(globals_1.SettingsState.countPrecision);
+  document.getElementById("fprec").value = String(window_interface_1.SettingsState.countPrecision);
 }
 
-exports.renderPrecisions = renderPrecisions;
-
 function renderMinimumAssembler(settings) {
-  let min = globals_1.SettingsState.DEFAULT_MINIMUM; // Backward compatibility.
+  let min = window_interface_1.SettingsState.DEFAULT_MINIMUM; // Backward compatibility.
 
   if ("use_3" in settings && settings.use_3 === "true") {
     min = "3";
   }
 
-  const assemblers = globals_1.InitState.spec.factories.crafting;
+  const assemblers = window_interface_1.InitState.spec.factories.crafting;
 
   if ("min" in settings && Number(min) >= 1 && Number(min) <= assemblers.length) {
     min = settings.min;
@@ -35185,47 +36610,43 @@ function renderMinimumAssembler(settings) {
   node.id = "minimum_assembler";
   const dropdown = dropdown_1.makeDropdown(d3.select(node));
   const inputs = dropdown.selectAll("div").data(assemblers).join("div");
-  const labels = dropdown_1.addInputs(inputs, "assembler_dropdown", (d, i) => String(i + 1) === min, (d, i) => globals_1.window.changeMin(String(i + 1)));
+  const labels = dropdown_1.addInputs(inputs, "assembler_dropdown", (d, i) => String(i + 1) === min, (d, i) => window_interface_1.window.changeMin(String(i + 1)));
   labels.append(d => icon_1.getImage(d, false, dropdown.node()));
   cell.replaceChild(node, oldNode);
 }
 
-exports.renderMinimumAssembler = renderMinimumAssembler;
-
 function setMinimumAssembler(min) {
-  globals_1.InitState.spec.setMinimum(min);
-  globals_1.SettingsState.minimumAssembler = min;
+  window_interface_1.InitState.spec.setMinimum(min);
+  window_interface_1.SettingsState.minimumAssembler = min;
 }
 
 exports.setMinimumAssembler = setMinimumAssembler;
 
 function renderFurnace(settings) {
-  let furnaceName = globals_1.SettingsState.DEFAULT_FURNACE;
+  let furnaceName = window_interface_1.SettingsState.DEFAULT_FURNACE;
 
   if ("furnace" in settings) {
     furnaceName = settings.furnace;
   }
 
-  if (furnaceName !== globals_1.InitState.spec.furnace.name) {
-    globals_1.InitState.spec.setFurnace(furnaceName);
+  if (furnaceName !== window_interface_1.InitState.spec.furnace.name) {
+    window_interface_1.InitState.spec.setFurnace(furnaceName);
   }
 
   const oldNode = document.getElementById("furnace");
   const cell = oldNode.parentNode;
   const node = document.createElement("span");
   node.id = "furnace";
-  const furnaces = globals_1.InitState.spec.factories.smelting;
+  const furnaces = window_interface_1.InitState.spec.factories.smelting;
   const dropdown = dropdown_1.makeDropdown(d3.select(node));
   const inputs = dropdown.selectAll("div").data(furnaces).join("div");
-  const labels = dropdown_1.addInputs(inputs, "furnace_dropdown", d => d.name === furnaceName, globals_1.window.changeFurnace);
+  const labels = dropdown_1.addInputs(inputs, "furnace_dropdown", d => d.name === furnaceName, window_interface_1.window.changeFurnace);
   labels.append(d => icon_1.getImage(d, false, dropdown.node()));
   cell.replaceChild(node, oldNode);
 }
 
-exports.renderFurnace = renderFurnace;
-
 function renderFuel(settings) {
-  let fuelName = globals_1.SettingsState.DEFAULT_FUEL;
+  let fuelName = window_interface_1.SettingsState.DEFAULT_FUEL;
 
   if ("fuel" in settings) {
     fuelName = settings.fuel;
@@ -35237,8 +36658,8 @@ function renderFuel(settings) {
   const node = document.createElement("span");
   node.id = "fuel";
   const dropdown = dropdown_1.makeDropdown(d3.select(node));
-  const inputs = dropdown.selectAll("div").data(globals_1.InitState.fuel).join("div");
-  const labels = dropdown_1.addInputs(inputs, "fuel_dropdown", d => d.name === fuelName, globals_1.window.changeFuel);
+  const inputs = dropdown.selectAll("div").data(window_interface_1.InitState.fuel).join("div");
+  const labels = dropdown_1.addInputs(inputs, "fuel_dropdown", d => d.name === fuelName, window_interface_1.window.changeFuel);
   labels.append(d => {
     const im = icon_1.getImage(d, false, dropdown.node());
     im.title += " (" + d.valueString() + ")";
@@ -35247,14 +36668,12 @@ function renderFuel(settings) {
   cell.replaceChild(node, oldNode);
 }
 
-exports.renderFuel = renderFuel;
-
 function setPreferredFuel(name) {
-  for (let i = 0; i < globals_1.InitState.fuel.length; i++) {
-    const f = globals_1.InitState.fuel[i];
+  for (let i = 0; i < window_interface_1.InitState.fuel.length; i++) {
+    const f = window_interface_1.InitState.fuel[i];
 
     if (f.name === name) {
-      globals_1.SettingsState.preferredFuel = f;
+      window_interface_1.SettingsState.preferredFuel = f;
     }
   }
 }
@@ -35262,7 +36681,7 @@ function setPreferredFuel(name) {
 exports.setPreferredFuel = setPreferredFuel;
 
 function renderOil(settings) {
-  let oil = globals_1.SettingsState.DEFAULT_OIL; // Named "p" for historical reasons.
+  let oil = window_interface_1.SettingsState.DEFAULT_OIL; // Named "p" for historical reasons.
 
   if ("p" in settings) {
     oil = settings.p;
@@ -35274,24 +36693,22 @@ function renderOil(settings) {
   const node = document.createElement("span");
   node.id = "oil";
   const dropdown = dropdown_1.makeDropdown(d3.select(node));
-  const inputs = dropdown.selectAll("div").data(globals_1.SettingsState.OIL_OPTIONS).join("div");
-  const labels = dropdown_1.addInputs(inputs, "oil_dropdown", d => d.priority === oil, globals_1.window.changeOil);
-  labels.append(d => icon_1.getImage(globals_1.InitState.solver.recipes[d.name], false, dropdown.node()));
+  const inputs = dropdown.selectAll("div").data(window_interface_1.SettingsState.OIL_OPTIONS).join("div");
+  const labels = dropdown_1.addInputs(inputs, "oil_dropdown", d => d.priority === oil, window_interface_1.window.changeOil);
+  labels.append(d => icon_1.getImage(window_interface_1.InitState.solver.recipes[d.name], false, dropdown.node()));
   cell.replaceChild(node, oldNode);
 }
 
-exports.renderOil = renderOil;
-
 function setOilRecipe(name) {
-  globals_1.InitState.solver.removeDisabledRecipes(globals_1.SettingsState.OIL_EXCLUSION[globals_1.SettingsState.oilGroup]);
-  globals_1.SettingsState.oilGroup = name;
-  globals_1.InitState.solver.addDisabledRecipes(globals_1.SettingsState.OIL_EXCLUSION[globals_1.SettingsState.oilGroup]);
+  window_interface_1.InitState.solver.removeDisabledRecipes(window_interface_1.SettingsState.OIL_EXCLUSION[window_interface_1.SettingsState.oilGroup]);
+  window_interface_1.SettingsState.oilGroup = name;
+  window_interface_1.InitState.solver.addDisabledRecipes(window_interface_1.SettingsState.OIL_EXCLUSION[window_interface_1.SettingsState.oilGroup]);
 }
 
 exports.setOilRecipe = setOilRecipe;
 
 function renderKovarex(settings) {
-  let k = globals_1.SettingsState.DEFAULT_KOVAREX;
+  let k = window_interface_1.SettingsState.DEFAULT_KOVAREX;
 
   if ("k" in settings) {
     k = settings.k !== "off";
@@ -35302,17 +36719,15 @@ function renderKovarex(settings) {
   input.checked = k;
 }
 
-exports.renderKovarex = renderKovarex;
-
 function setKovarex(enabled) {
-  globals_1.SettingsState.kovarexEnabled = enabled;
+  window_interface_1.SettingsState.kovarexEnabled = enabled;
 
   if (enabled) {
-    globals_1.InitState.solver.removeDisabledRecipes({
+    window_interface_1.InitState.solver.removeDisabledRecipes({
       "kovarex-enrichment-process": true
     });
   } else {
-    globals_1.InitState.solver.addDisabledRecipes({
+    window_interface_1.InitState.solver.addDisabledRecipes({
       "kovarex-enrichment-process": true
     });
   }
@@ -35321,7 +36736,7 @@ function setKovarex(enabled) {
 exports.setKovarex = setKovarex;
 
 function renderBelt(settings) {
-  let pref = globals_1.SettingsState.DEFAULT_BELT;
+  let pref = window_interface_1.SettingsState.DEFAULT_BELT;
 
   if ("belt" in settings) {
     pref = settings.belt;
@@ -35333,21 +36748,19 @@ function renderBelt(settings) {
   const node = document.createElement("span");
   node.id = "belt";
   const dropdown = dropdown_1.makeDropdown(d3.select(node));
-  const inputs = dropdown.selectAll("div").data(globals_1.InitState.belts).join("div");
-  const labels = dropdown_1.addInputs(inputs, "belt_dropdown", d => d.name === globals_1.SettingsState.preferredBelt, globals_1.window.changeBelt);
-  labels.append(d => icon_1.getImage(new globals_1.window.BeltIcon(globals_1.InitState.solver.items[d.name], d.speed), false, dropdown.node()));
+  const inputs = dropdown.selectAll("div").data(window_interface_1.InitState.belts).join("div");
+  const labels = dropdown_1.addInputs(inputs, "belt_dropdown", d => d.name === window_interface_1.SettingsState.preferredBelt, window_interface_1.window.changeBelt);
+  labels.append(d => icon_1.getImage(new window_interface_1.window.BeltIcon(window_interface_1.InitState.solver.items[d.name], d.speed), false, dropdown.node()));
   cell.replaceChild(node, oldNode);
 }
 
-exports.renderBelt = renderBelt;
-
 function setPreferredBelt(name) {
-  for (let i = 0; i < globals_1.InitState.belts.length; i++) {
-    const belt = globals_1.InitState.belts[i];
+  for (let i = 0; i < window_interface_1.InitState.belts.length; i++) {
+    const belt = window_interface_1.InitState.belts[i];
 
     if (belt.name === name) {
-      globals_1.SettingsState.preferredBelt = name;
-      globals_1.SettingsState.preferredBeltSpeed = belt.speed;
+      window_interface_1.SettingsState.preferredBelt = name;
+      window_interface_1.SettingsState.preferredBeltSpeed = belt.speed;
     }
   }
 }
@@ -35355,27 +36768,25 @@ function setPreferredBelt(name) {
 exports.setPreferredBelt = setPreferredBelt;
 
 function renderPipe(settings) {
-  let pipe = globals_1.SettingsState.DEFAULT_PIPE.toDecimal(0);
+  let pipe = window_interface_1.SettingsState.DEFAULT_PIPE.toDecimal(0);
 
   if ("pipe" in settings) {
     pipe = settings.pipe;
   }
 
   setMinPipe(pipe);
-  document.getElementById("pipe_length").value = globals_1.SettingsState.minPipeLength.toDecimal(0);
+  document.getElementById("pipe_length").value = window_interface_1.SettingsState.minPipeLength.toDecimal(0);
 }
 
-exports.renderPipe = renderPipe;
-
 function setMinPipe(lengthString) {
-  globals_1.SettingsState.minPipeLength = rational_1.RationalFromString(lengthString);
-  globals_1.SettingsState.maxPipeThroughput = globals_1.window.pipeThroughput(globals_1.SettingsState.minPipeLength);
+  window_interface_1.SettingsState.minPipeLength = rational_1.RationalFromString(lengthString);
+  window_interface_1.SettingsState.maxPipeThroughput = window_interface_1.window.pipeThroughput(window_interface_1.SettingsState.minPipeLength);
 }
 
 exports.setMinPipe = setMinPipe;
 
 function renderMiningProd(settings) {
-  let mprod = globals_1.SettingsState.DEFAULT_MINING_PROD;
+  let mprod = window_interface_1.SettingsState.DEFAULT_MINING_PROD;
 
   if ("mprod" in settings) {
     mprod = settings.mprod;
@@ -35383,10 +36794,8 @@ function renderMiningProd(settings) {
 
   const mprodInput = document.getElementById("mprod");
   mprodInput.value = mprod;
-  globals_1.InitState.spec.miningProd = getMprod();
+  window_interface_1.InitState.spec.miningProd = getMprod();
 }
-
-exports.renderMiningProd = renderMiningProd;
 
 function getMprod() {
   const mprod = document.getElementById("mprod").value;
@@ -35399,135 +36808,119 @@ function renderDefaultModule(settings) {
   let defaultModule = null;
 
   if ("dm" in settings) {
-    defaultModule = globals_1.InitState.shortModules[settings.dm];
+    defaultModule = window_interface_1.InitState.shortModules[settings.dm];
   }
 
-  globals_1.InitState.spec.setDefaultModule(defaultModule);
+  window_interface_1.InitState.spec.setDefaultModule(defaultModule);
   const oldDefMod = document.getElementById("default_module");
   const cell = oldDefMod.parentNode;
   const node = document.createElement("span");
   node.id = "default_module";
-  globals_1.window.moduleDropdown(d3.select(node), "default_module_dropdown", d => d === defaultModule, globals_1.window.changeDefaultModule);
+  module_1.moduleDropdown(d3.select(node), "default_module_dropdown", d => d === defaultModule, window_interface_1.window.changeDefaultModule);
   cell.replaceChild(node, oldDefMod);
-}
+} // default beacon
 
-exports.renderDefaultModule = renderDefaultModule; // default beacon
 
 function renderDefaultBeacon(settings) {
   let defaultBeacon = null;
   let defaultCount = rational_1.zero;
 
   if ("db" in settings) {
-    defaultBeacon = globals_1.InitState.shortModules[settings.db];
+    defaultBeacon = window_interface_1.InitState.shortModules[settings.db];
   }
 
   if ("dbc" in settings) {
     defaultCount = rational_1.RationalFromString(settings.dbc);
   }
 
-  globals_1.InitState.spec.setDefaultBeacon(defaultBeacon, defaultCount);
+  window_interface_1.InitState.spec.setDefaultBeacon(defaultBeacon, defaultCount);
   const dbcField = document.getElementById("default_beacon_count");
   dbcField.value = defaultCount.toDecimal(0);
   const oldDefMod = document.getElementById("default_beacon");
   const cell = oldDefMod.parentNode;
   const node = document.createElement("span");
   node.id = "default_beacon";
-  globals_1.window.moduleDropdown(d3.select(node), "default_beacon_dropdown", d => d === defaultBeacon, globals_1.window.changeDefaultBeacon, d => d === null || d.canBeacon());
+  module_1.moduleDropdown(d3.select(node), "default_beacon_dropdown", d => d === defaultBeacon, window_interface_1.window.changeDefaultBeacon, d => d === null || d.canBeacon());
   cell.replaceChild(node, oldDefMod);
 }
 
-exports.renderDefaultBeacon = renderDefaultBeacon;
-
 function renderVisualizerType(settings) {
-  globals_1.SettingsState.visualizer = globals_1.SettingsState.DEFAULT_VISUALIZER;
+  window_interface_1.SettingsState.visualizer = window_interface_1.SettingsState.DEFAULT_VISUALIZER;
 
   if ("vis" in settings) {
-    globals_1.SettingsState.visualizer = settings.vis;
+    window_interface_1.SettingsState.visualizer = settings.vis;
   }
 
-  const input = document.getElementById("vis_" + globals_1.SettingsState.visualizer);
+  const input = document.getElementById("vis_" + window_interface_1.SettingsState.visualizer);
   input.checked = true;
 }
-
-exports.renderVisualizerType = renderVisualizerType;
 
 function renderVisualizerDirection(settings) {
-  globals_1.SettingsState.visDirection = globals_1.SettingsState.DEFAULT_DIRECTION;
+  window_interface_1.SettingsState.visDirection = window_interface_1.SettingsState.DEFAULT_DIRECTION;
 
   if ("vd" in settings) {
-    globals_1.SettingsState.visDirection = settings.vd;
+    window_interface_1.SettingsState.visDirection = settings.vd;
   }
 
-  const input = document.getElementById("visdir_" + globals_1.SettingsState.visDirection);
+  const input = document.getElementById("visdir_" + window_interface_1.SettingsState.visDirection);
   input.checked = true;
 }
 
-exports.renderVisualizerDirection = renderVisualizerDirection;
-
 function renderNodeBreadth(settings) {
-  globals_1.SettingsState.maxNodeHeight = globals_1.SettingsState.DEFAULT_NODE_BREADTH;
+  window_interface_1.SettingsState.maxNodeHeight = window_interface_1.SettingsState.DEFAULT_NODE_BREADTH;
 
   if ("nh" in settings) {
-    globals_1.SettingsState.maxNodeHeight = Number(settings.nh);
+    window_interface_1.SettingsState.maxNodeHeight = Number(settings.nh);
   }
 
   const input = document.getElementById("vis-node-breadth");
-  input.value = String(globals_1.SettingsState.maxNodeHeight);
+  input.value = String(window_interface_1.SettingsState.maxNodeHeight);
 }
 
-exports.renderNodeBreadth = renderNodeBreadth;
-
 function renderLinkLength(settings) {
-  globals_1.SettingsState.linkLength = globals_1.SettingsState.DEFAULT_LINK_LENGTH;
+  window_interface_1.SettingsState.linkLength = window_interface_1.SettingsState.DEFAULT_LINK_LENGTH;
 
   if ("ll" in settings) {
-    globals_1.SettingsState.linkLength = Number(settings.ll);
+    window_interface_1.SettingsState.linkLength = Number(settings.ll);
   }
 
   const input = document.getElementById("vis-link-length");
-  input.value = String(globals_1.SettingsState.linkLength);
+  input.value = String(window_interface_1.SettingsState.linkLength);
 }
 
-exports.renderLinkLength = renderLinkLength;
-
 function renderValueFormat(settings) {
-  globals_1.SettingsState.displayFormat = globals_1.SettingsState.DEFAULT_FORMAT;
+  window_interface_1.SettingsState.displayFormat = window_interface_1.SettingsState.DEFAULT_FORMAT;
 
   if ("vf" in settings) {
-    globals_1.SettingsState.displayFormat = globals_1.SettingsState.displayFormats[settings.vf];
+    window_interface_1.SettingsState.displayFormat = window_interface_1.SettingsState.displayFormats[settings.vf];
   }
 
-  const input = document.getElementById(globals_1.SettingsState.displayFormat + "_format");
+  const input = document.getElementById(window_interface_1.SettingsState.displayFormat + "_format");
   input.checked = true;
 }
 
-exports.renderValueFormat = renderValueFormat;
-
 function renderTooltip(settings) {
-  globals_1.SettingsState.tooltipsEnabled = globals_1.SettingsState.DEFAULT_TOOLTIP;
+  window_interface_1.SettingsState.tooltipsEnabled = window_interface_1.SettingsState.DEFAULT_TOOLTIP;
 
   if ("t" in settings) {
-    globals_1.SettingsState.tooltipsEnabled = settings.t !== "off";
+    window_interface_1.SettingsState.tooltipsEnabled = settings.t !== "off";
   }
 
   const input = document.getElementById("tooltip");
-  input.checked = globals_1.SettingsState.tooltipsEnabled;
+  input.checked = window_interface_1.SettingsState.tooltipsEnabled;
 }
 
-exports.renderTooltip = renderTooltip;
-
 function renderShowDebug(settings) {
-  globals_1.SettingsState.showDebug = globals_1.SettingsState.DEFAULT_DEBUG;
+  window_interface_1.SettingsState.showDebug = window_interface_1.SettingsState.DEFAULT_DEBUG;
 
   if ("debug" in settings) {
-    globals_1.SettingsState.showDebug = settings.debug === "on";
+    window_interface_1.SettingsState.showDebug = settings.debug === "on";
   }
 
   const debug = document.getElementById("render_debug");
-  debug.checked = globals_1.SettingsState.showDebug;
-}
+  debug.checked = window_interface_1.SettingsState.showDebug;
+} // all
 
-exports.renderShowDebug = renderShowDebug; // all
 
 function renderSettings(settings) {
   renderTooltip(settings);
@@ -35551,51 +36944,745 @@ function renderSettings(settings) {
   renderValueFormat(settings);
 }
 
-exports.renderSettings = renderSettings; // export vars to window
+exports.renderSettings = renderSettings;
 
-(() => {
-  moveFnToWindow(Modification);
-  moveFnToWindow(Oil);
-  moveFnToWindow(addOverrideOptions);
-  moveFnToWindow(normalizeDataSetName);
-  moveFnToWindow(renderDataSetOptions);
-  moveFnToWindow(currentMod);
-  moveFnToWindow(renderColorScheme);
-  moveFnToWindow(setColorScheme);
-  moveFnToWindow(renderRateOptions);
-  moveFnToWindow(renderPrecisions);
-  moveFnToWindow(renderMinimumAssembler);
-  moveFnToWindow(setMinimumAssembler);
-  moveFnToWindow(renderFurnace);
-  moveFnToWindow(renderFuel);
-  moveFnToWindow(setPreferredFuel);
-  moveFnToWindow(renderOil);
-  moveFnToWindow(setOilRecipe);
-  moveFnToWindow(renderKovarex);
-  moveFnToWindow(setKovarex);
-  moveFnToWindow(renderBelt);
-  moveFnToWindow(setPreferredBelt);
-  moveFnToWindow(renderPipe);
-  moveFnToWindow(setMinPipe);
-  moveFnToWindow(renderMiningProd);
-  moveFnToWindow(getMprod);
-  moveFnToWindow(renderDefaultModule);
-  moveFnToWindow(renderDefaultBeacon);
-  moveFnToWindow(renderVisualizerType);
-  moveFnToWindow(renderVisualizerDirection);
-  moveFnToWindow(renderNodeBreadth);
-  moveFnToWindow(renderLinkLength);
-  moveFnToWindow(renderValueFormat);
-  moveFnToWindow(renderTooltip);
-  moveFnToWindow(renderShowDebug);
-  moveFnToWindow(renderSettings);
+},{"./color":38,"./dropdown":40,"./icon":43,"./module":47,"./rational":48,"./window-interface":57,"d3":33}],51:[function(require,module,exports){
+"use strict";
 
-  function moveFnToWindow(fn) {
-    globals_1.window[fn.name] = fn;
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+const rational_1 = require("./rational");
+
+function pivot(A, row, col) {
+  let x = A.index(row, col);
+  A.mulRow(row, x.reciprocate());
+
+  for (let r = 0; r < A.rows; r++) {
+    if (r === row) {
+      continue;
+    }
+
+    const ratio = A.index(r, col);
+
+    if (ratio.isZero()) {
+      continue;
+    }
+
+    for (let c = 0; c < A.cols; c++) {
+      x = A.index(r, c).sub(A.index(row, c).mul(ratio));
+      A.setIndex(r, c, x);
+    }
   }
-})();
+} // never used
+// function getTestRatios(A, col) {
+//     const ratios = [];
+//     for (let i = 0; i < A.rows - 1; i++) {
+//         const x = A.index(i, col);
+//         if (!zero.less(x)) {
+//             ratios.push(null);
+//         } else {
+//             ratios.push(A.index(i, A.cols - 1).div(x));
+//         }
+//     }
+//     return ratios;
+// }
 
-},{"./color":38,"./dropdown":39,"./globals":40,"./icon":41,"./rational":44,"d3":33}],46:[function(require,module,exports){
+
+function pivotCol(A, col) {
+  let best_ratio = null;
+  let best_row = null;
+
+  for (let row = 0; row < A.rows - 1; row++) {
+    const x = A.index(row, col);
+
+    if (!rational_1.zero.less(x)) {
+      continue;
+    }
+
+    const ratio = A.index(row, A.cols - 1).div(x);
+
+    if (best_ratio === null || ratio.less(best_ratio)) {
+      best_ratio = ratio;
+      best_row = row;
+    }
+  }
+
+  if (best_ratio !== null) {
+    pivot(A, best_row, col);
+  }
+
+  return best_row;
+} // never used
+// Every basic variable in our initial tableau is negative. This procedure will
+// invert these bases, placing the tableau into the standard form, ready for
+// application of the simplex method.
+// function eliminateNegativeBases(A) {
+//     const negativeBases = [];
+//     for (let i = 0; i < A.rows - 1; i++) {
+//         // If the RHS is zero, just multiply the whole row by -1.
+//         if (A.index(i, A.cols - 1).equal(zero)) {
+//             A.mulRow(i, minusOne);
+//             negativeBases.push(false);
+//         } else {
+//             negativeBases.push(true);
+//         }
+//     }
+//     let done = false;
+//     findNext: while (!done) {
+//         for (let i = 0; i < negativeBases.length; i++) {
+//             if (!negativeBases[i]) {
+//                 continue;
+//             }
+//             // Find largest positive coefficient in the row.
+//             let max = zero;
+//             let maxCol = null;
+//             for (let j = 0; j < A.cols - 1; j++) {
+//                 const x = A.index(i, j);
+//                 if (max.less(x)) {
+//                     max = x;
+//                     maxCol = j;
+//                 }
+//             }
+//             // Something is wrong; we can't solve this.
+//             if (maxCol === null) {
+//                 throw new Error("Cannot eliminate negative basic variable.");
+//             }
+//             // Pivot on that column. If two rows have an equal test ratio,
+//             // and one has a negative basic variable, prefer the row whose
+//             // value is negative.
+//             const ratios = getTestRatios(A, maxCol);
+//             let matches = [];
+//             let minRatio = null;
+//             for (let j = 0; j < ratios.length; j++) {
+//                 const ratio = ratios[j];
+//                 if (ratio === null || ratio.less(zero)) {
+//                     continue;
+//                 }
+//                 if (minRatio === null || ratio.less(minRatio)) {
+//                     minRatio = ratio;
+//                     matches = [j];
+//                 } else if (ratio.equal(minRatio)) {
+//                     matches.push(j);
+//                 }
+//             }
+//             let pivotIdx = 0;
+//             for (; pivotIdx < matches.length; pivotIdx++) {
+//                 if (negativeBases[matches[pivotIdx]]) {
+//                     break;
+//                 }
+//             }
+//             if (pivotIdx === matches.length) {
+//                 pivotIdx = 0;
+//             }
+//             const pivotRow = matches[pivotIdx];
+//             negativeBases[pivotRow] = false;
+//             pivot(A, pivotRow, maxCol);
+//             continue findNext;
+//         }
+//         done = true;
+//     }
+// }
+
+
+function simplex(A) {
+  while (true) {
+    let min = null;
+    let minCol = null;
+
+    for (let col = 0; col < A.cols - 1; col++) {
+      const x = A.index(A.rows - 1, col);
+
+      if (min === null || x.less(min)) {
+        min = x;
+        minCol = col;
+      }
+    }
+
+    if (!min.less(rational_1.zero)) {
+      return;
+    }
+
+    pivotCol(A, minCol);
+  }
+}
+
+exports.simplex = simplex;
+
+},{"./rational":48}],52:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function sorted(collection, key) {
+  // if collection is an array, collectionArray will be an array of the same type.
+  // otherwise, if collection is an IObjectMap, collectionArray will be a string[].
+  let collectionArray;
+
+  if (!Array.isArray(collection)) {
+    collectionArray = Object.keys(collection);
+  } else {
+    collectionArray = collection;
+  }
+
+  const indexes = [];
+  let keyvals = [];
+
+  for (let i = 0; i < collectionArray.length; i++) {
+    indexes.push(i);
+
+    if (key) {
+      keyvals.push(key(collectionArray[i]));
+    }
+  }
+
+  if (!key) {
+    // since key isn't optional when T = IObjectMap<any>, this check ensures collectionArray will be a string[]. For
+    // that reason, we can safely assume that keyvals will be a string[].
+    keyvals = collectionArray;
+  }
+
+  indexes.sort((a, b) => {
+    const x = keyvals[a];
+    const y = keyvals[b];
+
+    if (x < y) {
+      return -1;
+    } else if (x > y) {
+      return 1;
+    }
+
+    return 0;
+  });
+  const result = [];
+
+  for (const index of indexes) {
+    result.push(collectionArray[index]);
+  }
+
+  return result;
+}
+
+exports.sorted = sorted;
+
+},{}],53:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+let subgraphID = 0;
+
+class Subgraph {
+  constructor(recipes) {
+    this.id = subgraphID;
+    subgraphID++;
+    this.recipes = recipes;
+    this.products = {};
+
+    for (const recipeName in recipes) {
+      const recipe = recipes[recipeName];
+
+      for (let i = 0; i < recipe.products.length; i++) {
+        const ing = recipe.products[i];
+        this.products[ing.item.name] = ing.item;
+      }
+    }
+
+    this.ingredients = {};
+
+    for (const recipeName in recipes) {
+      const recipe = recipes[recipeName];
+
+      for (let i = 0; i < recipe.ingredients.length; i++) {
+        const ing = recipe.ingredients[i];
+
+        if (ing.item.name in this.products) {
+          continue;
+        }
+
+        this.ingredients[ing.item.name] = ing.item;
+      }
+    }
+  }
+
+  isInteresting() {
+    return Object.keys(this.recipes).length > 1 || Object.keys(this.products).length > 1;
+  }
+
+}
+
+class SubgraphMap {
+  constructor(spec, recipes) {
+    this.groups = {};
+    this.extraUses = {};
+
+    for (const recipeName in recipes) {
+      const recipe = recipes[recipeName];
+      const g = {}; // TODO
+
+      g[recipeName] = recipe;
+      const s = new Subgraph(g);
+      this.groups[recipeName] = s;
+      const fuelIngredient = recipe.fuelIngredient(spec);
+
+      for (let i = 0; i < fuelIngredient.length; i++) {
+        const ing = fuelIngredient[i];
+
+        if (ing.item.name in this.extraUses) {
+          this.extraUses[ing.item.name].push(recipe);
+        } else {
+          this.extraUses[ing.item.name] = [recipe];
+        }
+
+        if (ing.item.name in s.products) {
+          continue;
+        }
+
+        s.ingredients[ing.item.name] = ing.item;
+      }
+    }
+  }
+
+  merge(recipes) {
+    const combinedRecipes = {};
+
+    for (let i = 0; i < recipes.length; i++) {
+      const recipe = recipes[i];
+      const group = this.groups[recipe.name];
+      Object.assign(combinedRecipes, group.recipes);
+    }
+
+    const newGroup = new Subgraph(combinedRecipes);
+
+    for (const recipeName in combinedRecipes) {
+      this.groups[recipeName] = newGroup;
+    }
+  }
+
+  mergeGroups(groups) {
+    const allRecipes = {}; // TODO
+
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+
+      for (const recipeName in group.recipes) {
+        const recipe = group.recipes[recipeName];
+        allRecipes[recipeName] = recipe;
+      }
+    }
+
+    this.merge(Object.keys(allRecipes).map(k => allRecipes[k]));
+  }
+
+  get(recipe) {
+    return this.groups[recipe.name];
+  }
+
+  groupObjects() {
+    const groups = {}; // TODO
+
+    for (const recipeName in this.groups) {
+      const group = this.groups[recipeName];
+      groups[group.id] = group;
+    }
+
+    return groups;
+  }
+
+  getInterestingGroups() {
+    const result = [];
+    const groups = this.groupObjects();
+
+    for (const id in groups) {
+      const g = groups[id];
+
+      if (g.isInteresting()) {
+        result.push(g.recipes);
+      }
+    }
+
+    return result;
+  }
+
+  neighbors(group, invert) {
+    let itemSet;
+
+    if (invert) {
+      itemSet = group.products;
+    } else {
+      itemSet = group.ingredients;
+    }
+
+    const seen = {}; // TODO
+
+    const result = [];
+
+    for (const itemName in itemSet) {
+      const item = itemSet[itemName];
+      let recipeSet;
+
+      if (invert) {
+        recipeSet = item.uses;
+
+        if (itemName in this.extraUses) {
+          recipeSet = recipeSet.concat(this.extraUses[itemName]);
+        }
+      } else {
+        recipeSet = item.recipes;
+      }
+
+      const subgroups = {}; // TODO
+
+      for (let i = 0; i < recipeSet.length; i++) {
+        const recipe = recipeSet[i];
+        const group = this.get(recipe);
+        subgroups[group.id] = group;
+      }
+
+      for (const id in subgroups) {
+        const g = subgroups[id];
+
+        if (!(id in seen)) {
+          seen[id] = g;
+          result.push(g);
+        }
+      }
+    }
+
+    return result;
+  }
+
+}
+
+function visit(groupmap, group, seen, invert) {
+  if (group.id in seen) {
+    return [];
+  }
+
+  seen[group.id] = group;
+  const neighbors = groupmap.neighbors(group, invert);
+  const result = [];
+
+  for (let i = 0; i < neighbors.length; i++) {
+    const neighbor = neighbors[i];
+    const x = visit(groupmap, neighbor, seen, invert);
+    Array.prototype.push.apply(result, x);
+  }
+
+  result.push(group);
+  return result;
+}
+
+function findCycles(groupmap) {
+  let seen = {};
+  const L = [];
+  const groups = groupmap.groupObjects();
+
+  for (const id in groups) {
+    const group = groups[id];
+    const x = visit(groupmap, group, seen, false);
+    Array.prototype.push.apply(L, x);
+  }
+
+  const components = [];
+  seen = {};
+
+  for (let i = L.length - 1; i >= 0; i--) {
+    const root = L[i];
+
+    if (root.id in seen) {
+      continue;
+    }
+
+    const component = visit(groupmap, root, seen, true);
+    components.push(component);
+  }
+
+  return components;
+} // Map an item to the items that it depends on.
+
+
+function getItemDeps(item, groupmap, depmap) {
+  if (item.name in depmap) {
+    return depmap[item.name];
+  }
+
+  const groups = {}; // TODO
+
+  for (let i = 0; i < item.recipes.length; i++) {
+    const recipe = item.recipes[i];
+    const group = groupmap.get(recipe);
+    groups[group.id] = group;
+  }
+
+  const deps = {}; // TODO
+
+  deps[item.name] = item;
+
+  for (const id in groups) {
+    const group = groups[id];
+
+    for (const itemName in group.ingredients) {
+      const subitem = group.ingredients[itemName];
+      const subdeps = getItemDeps(subitem, groupmap, depmap);
+      Object.assign(deps, subdeps);
+    }
+  }
+
+  depmap[item.name] = deps;
+  return deps;
+}
+
+const PENDING = {}; // Map an item to the items that depend on it.
+
+function getItemProducts(item, groupmap, prodmap) {
+  if (item.name in prodmap) {
+    return prodmap[item.name];
+  }
+
+  const groups = {}; // TODO
+
+  let uses = item.uses;
+
+  if (item.name in groupmap.extraUses) {
+    uses = uses.concat(groupmap.extraUses[item.name]);
+  }
+
+  for (let i = 0; i < uses.length; i++) {
+    const recipe = uses[i];
+    const group = groupmap.get(recipe);
+    groups[group.id] = group;
+  }
+
+  const prods = {}; // TODO
+
+  prods[item.name] = item;
+  prodmap[item.name] = PENDING;
+
+  for (const id in groups) {
+    const group = groups[id];
+
+    for (const itemName in group.products) {
+      const subitem = group.products[itemName];
+      const subprods = getItemProducts(subitem, groupmap, prodmap);
+
+      if (subprods !== PENDING) {
+        Object.assign(prods, subprods);
+      }
+    }
+  }
+
+  prodmap[item.name] = prods;
+  return prods;
+}
+
+function findGroups(spec, items, recipes) {
+  const groups = new SubgraphMap(spec, recipes); // 1) Condense all recipes that produce a given item.
+
+  for (const itemName in items) {
+    const item = items[itemName];
+
+    if (item.recipes.length > 1) {
+      groups.merge(item.recipes);
+    }
+  } // Get the "simple" groups, which are used for display purposes.
+
+
+  const simpleGroups = groups.getInterestingGroups(); // 2) Condense all recipe cycles.
+
+  const groupCycles = findCycles(groups);
+
+  for (let i = 0; i < groupCycles.length; i++) {
+    const cycle = groupCycles[i];
+    groups.mergeGroups(cycle);
+  } // 3) Condense any groups which have a multivariate relationship, including
+  //    recipes which are between the two.
+
+
+  const itemDeps = {}; // TODO
+
+  const itemProds = {}; // TODO
+
+  for (const itemName in items) {
+    const item = items[itemName];
+
+    if (!(itemName in itemDeps)) {
+      getItemDeps(item, groups, itemDeps);
+    }
+
+    if (!(itemName in itemProds)) {
+      getItemProducts(item, groups, itemProds);
+    }
+  }
+
+  const groupObjs = groups.groupObjects();
+  const itemGroups = {}; // TODO
+
+  for (const id in groupObjs) {
+    const group = groupObjs[id];
+
+    for (const prodID in group.products) {
+      const item = group.products[prodID];
+      itemGroups[item.name] = group;
+    }
+  }
+
+  let mergings = []; // TODO
+
+  for (const id in groupObjs) {
+    const group = groupObjs[id];
+
+    if (!group.isInteresting()) {
+      continue;
+    }
+
+    const matches = {}; // TODO
+
+    for (const itemName in group.ingredients) {
+      const item = group.ingredients[itemName];
+      const deps = itemDeps[item.name];
+
+      for (const depName in deps) {
+        const dep = deps[depName];
+        const g = itemGroups[depName];
+
+        if (!g.isInteresting()) {
+          continue;
+        }
+
+        const pair = {
+          a: item,
+          b: dep
+        };
+
+        if (g.id in matches) {
+          matches[g.id].push(pair);
+        } else {
+          matches[g.id] = [pair];
+        }
+      }
+    }
+
+    const toMerge = {}; // TODO
+
+    let performMerge = false;
+
+    for (const matchID in matches) {
+      const g = groupObjs[matchID];
+      const links = matches[matchID];
+
+      outer: for (let i = 0; i < links.length - 1; i++) {
+        const x = links[i];
+
+        for (let j = i + 1; j < links.length; j++) {
+          const y = links[j];
+
+          if (x.a !== y.a && x.b !== y.b) {
+            toMerge[g.id] = g;
+            performMerge = true;
+            break outer;
+          }
+        }
+      }
+    }
+
+    if (performMerge) {
+      const groupsToMerge = {}; // TODO
+
+      groupsToMerge[group.id] = group;
+      const allDeps = {}; // TODO
+
+      for (const itemName in group.ingredients) {
+        for (const depName in itemDeps[itemName]) {
+          const dep = itemDeps[itemName][depName];
+          allDeps[depName] = dep;
+        }
+      }
+
+      for (const id in toMerge) {
+        const g = toMerge[id];
+        groupsToMerge[g.id] = g;
+
+        for (const itemName in g.products) {
+          for (const prodName in itemProds[itemName]) {
+            if (prodName in g.products) {
+              continue;
+            }
+
+            if (!(prodName in allDeps)) {
+              continue;
+            }
+
+            const prodGroup = itemGroups[prodName];
+            groupsToMerge[prodGroup.id] = prodGroup;
+          }
+        }
+      }
+
+      mergings.push(groupsToMerge);
+    }
+  }
+
+  let merge = true;
+
+  while (merge) {
+    merge = false;
+    const result = [];
+
+    while (mergings.length > 0) {
+      const current = mergings.pop(); // TODO
+
+      const newMergings = [];
+
+      for (let i = 0; i < mergings.length; i++) {
+        const x = mergings[i]; // TODO
+
+        let disjoint = true;
+
+        for (const id in current) {
+          if (id in x) {
+            disjoint = false;
+            break;
+          }
+        }
+
+        if (disjoint) {
+          newMergings.push(x);
+        } else {
+          merge = true;
+
+          for (const id in x) {
+            const g = x[id];
+            current[id] = g;
+          }
+        }
+      }
+
+      result.push(current);
+      mergings = newMergings;
+    }
+
+    mergings = result;
+  }
+
+  for (let i = 0; i < mergings.length; i++) {
+    const s = Object.keys(mergings[i]).map(k => mergings[i][k]);
+    groups.mergeGroups(s);
+  }
+
+  return {
+    groups: groups.getInterestingGroups(),
+    simple: simpleGroups
+  };
+}
+
+exports.findGroups = findGroups;
+
+},{}],54:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -35675,4 +37762,518 @@ class Tooltip {
 
 exports.Tooltip = Tooltip;
 
-},{"popper.js":35}]},{},[42]);
+},{"popper.js":35}],55:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+const rational_1 = require("./rational");
+
+class Requirements {
+  constructor(rate, item) {
+    this.rate = rate;
+    this.item = item;
+    this.dependencies = [];
+  }
+
+  add(reqs, suppress) {
+    if (reqs.item && !suppress) {
+      this.dependencies.push(reqs);
+    }
+  }
+
+}
+
+class Totals {
+  constructor(rate, item) {
+    this.reqs = new Requirements(rate, item); // Maps recipe name to its required rate.
+
+    this.totals = {}; // Maps item name to its as-yet-unfulfilled rate.
+
+    this.unfinished = {}; // Maps item name to rate at which it will be wasted.
+
+    this.waste = {};
+    this.topo = [];
+  }
+
+  combine(other, suppress) {
+    this.reqs.add(other.reqs, suppress);
+    let newTopo = [];
+
+    for (const recipeName of this.topo) {
+      if (!(recipeName in other.totals)) {
+        newTopo.push(recipeName);
+      }
+    }
+
+    newTopo = newTopo.concat(other.topo);
+
+    for (const recipeName of Object.keys(other.totals)) {
+      this.add(recipeName, other.totals[recipeName]);
+    }
+
+    for (const itemName of Object.keys(other.unfinished)) {
+      this.addUnfinished(itemName, other.unfinished[itemName]);
+    }
+
+    for (const itemName of Object.keys(other.waste)) {
+      this.addWaste(itemName, other.waste[itemName]);
+    }
+
+    this.topo = newTopo;
+  }
+
+  add(recipeName, rate) {
+    this.topo.push(recipeName);
+    this.totals[recipeName] = (this.totals[recipeName] || rational_1.zero).add(rate);
+  }
+
+  addUnfinished(itemName, rate) {
+    this.unfinished[itemName] = (this.unfinished[itemName] || rational_1.zero).add(rate);
+  }
+
+  addWaste(itemName, rate) {
+    this.waste[itemName] = (this.waste[itemName] || rational_1.zero).add(rate);
+  }
+
+  get(recipeName) {
+    return this.totals[recipeName];
+  }
+
+  getWaste(itemName) {
+    const waste = this.waste[itemName];
+
+    if (!waste) {
+      return rational_1.zero;
+    }
+
+    return waste;
+  }
+
+}
+
+exports.Totals = Totals;
+
+},{"./rational":48}],56:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+const matrix_1 = require("./matrix");
+
+const rational_1 = require("./rational");
+
+const simplex_1 = require("./simplex");
+
+const window_interface_1 = require("./window-interface");
+
+const PRIORITY = ["uranium-ore", "steam", "coal", "crude-oil", "water"];
+
+class MatrixSolver {
+  constructor(spec, recipes) {
+    const products = {};
+    const ingredients = {};
+    const recipeArray = [];
+
+    for (const recipeName of Object.keys(recipes)) {
+      const recipe = recipes[recipeName];
+      recipeArray.push(recipe);
+
+      for (const ing of recipe.products) {
+        products[ing.item.name] = ing.item;
+      }
+
+      const ings = recipe.getIngredients(spec);
+
+      for (const ing of ings) {
+        ingredients[ing.item.name] = ing.item;
+      }
+    }
+
+    const items = [];
+    this.items = items; // Map of items produced by this matrix.
+
+    this.outputs = {}; // Array of items produced by this matrix.
+
+    this.outputItems = []; // Map from item name to waste-item column (minus offset).
+
+    const wasteItems = {};
+
+    for (const itemName of Object.keys(products)) {
+      const item = products[itemName];
+      this.outputs[item.name] = item;
+      items.push(item);
+      wasteItems[item.name] = this.outputItems.length;
+      this.outputItems.push(item);
+    } // Array of the recipes that produce the "inputs" to this matrix.
+
+
+    this.inputRecipes = [];
+
+    for (const itemName of Object.keys(ingredients)) {
+      if (itemName in products) {
+        continue;
+      }
+
+      const item = ingredients[itemName];
+      items.push(item);
+      const recipe = item.recipes[0];
+      this.inputRecipes.push(recipe);
+    }
+
+    const allRecipes = recipeArray.concat(this.inputRecipes);
+    const itemIndexes = {};
+
+    for (let i = 0; i < items.length; i++) {
+      itemIndexes[items[i].name] = i;
+    }
+
+    this.recipeIndexes = {};
+    this.inputColumns = [];
+
+    for (let i = 0; i < allRecipes.length; i++) {
+      this.recipeIndexes[allRecipes[i].name] = i;
+
+      if (i >= recipeArray.length) {
+        this.inputColumns.push(i);
+      }
+    }
+
+    const rows = allRecipes.length + 2;
+    const cols = items.length + allRecipes.length + 3;
+    const recipeMatrix = new matrix_1.Matrix(rows, cols);
+
+    for (let i = 0; i < recipeArray.length; i++) {
+      const recipe = recipeArray[i];
+      const ings = recipe.getIngredients(spec);
+
+      for (const ing of ings) {
+        const k = itemIndexes[ing.item.name];
+        recipeMatrix.addIndex(i, k, rational_1.zero.sub(ing.amount));
+      }
+
+      for (const ing of recipe.products) {
+        const k = itemIndexes[ing.item.name];
+        recipeMatrix.addIndex(i, k, ing.amount);
+      } // Recipe tax.
+
+
+      recipeMatrix.setIndex(i, items.length, rational_1.minusOne);
+    }
+
+    for (let i = 0; i < this.inputRecipes.length; i++) {
+      const recipe = this.inputRecipes[i];
+
+      for (const ing of recipe.products) {
+        const k = itemIndexes[ing.item.name];
+        recipeMatrix.addIndex(i + recipeArray.length, k, ing.amount);
+      }
+    } // Add "recipe tax," so that wasted items will be wasted directly.
+    // There is no surplus variable for this value.
+
+
+    recipeMatrix.setIndex(allRecipes.length, items.length, rational_1.one);
+    let col; // Add surplus variables.
+
+    for (let i = 0; i < allRecipes.length; i++) {
+      col = items.length + i + 1;
+      recipeMatrix.setIndex(i, col, rational_1.one);
+    }
+
+    recipeMatrix.setIndex(rows - 1, col + 1, rational_1.one); // The matrix. (matrix.js)
+
+    this.matrix = recipeMatrix; // Map from item name to row number.
+
+    this.itemIndexes = itemIndexes; // List of all recipes in matrix, in matrix column order.
+
+    this.recipes = allRecipes;
+    this.lastProblem = null;
+    this.lastSolution = null;
+  }
+
+  match(products) {
+    const result = {};
+
+    for (const itemName in products) {
+      if (itemName in this.outputs) {
+        result[itemName] = products[itemName];
+      }
+    }
+
+    return result;
+  }
+
+  getPriorityRatio(A) {
+    let min = null;
+    let max = null;
+
+    for (let x of A.mat) {
+      x = x.abs();
+
+      if (x.isZero()) {
+        continue;
+      }
+
+      if (!min || x.less(min)) {
+        min = x;
+      }
+
+      if (!max || max.less(x)) {
+        max = x;
+      }
+    }
+
+    return max.div(min);
+  }
+
+  setCost(A) {
+    // Recipe tax cost.
+    A.setIndex(this.recipes.length, A.cols - 1, rational_1.one);
+    const ratio = this.getPriorityRatio(A); // Cost == 1 already "spent" on recipe tax.
+
+    let cost = ratio; // Maps priority number to column number.
+
+    for (let i = PRIORITY.length - 1; i >= 0; i--) {
+      const name = PRIORITY[i];
+      const row = this.recipeIndexes[name];
+
+      if (!row) {
+        continue;
+      }
+
+      A.setIndex(row, A.cols - 1, cost);
+      cost = cost.mul(ratio);
+    }
+  }
+
+  solveFor(products, spec, disabled) {
+    const A = this.matrix.copy();
+
+    for (const itemName in products) {
+      if (itemName in this.itemIndexes) {
+        const col = this.itemIndexes[itemName];
+        const rate = products[itemName];
+        A.setIndex(A.rows - 1, col, rational_1.zero.sub(rate));
+      }
+    } // Zero out disabled recipes
+
+
+    for (const recipeName in disabled) {
+      if (recipeName in this.recipeIndexes) {
+        const i = this.recipeIndexes[recipeName];
+        A.zeroRow(i);
+      }
+    } // Apply productivity effects.
+
+
+    for (let i = 0; i < this.recipes.length; i++) {
+      const recipe = this.recipes[i];
+
+      if (recipe.name in disabled) {
+        continue;
+      }
+
+      const factory = spec.getFactory(recipe);
+
+      if (factory) {
+        const prod = factory.prodEffect(spec);
+
+        if (prod.equal(rational_1.one)) {
+          continue;
+        }
+
+        if (window_interface_1.InitState.useLegacyCalculations) {
+          for (const ing of recipe.products) {
+            const k = this.itemIndexes[ing.item.name];
+            A.setIndex(i, k, rational_1.zero);
+          }
+
+          const ings = recipe.getIngredients(spec);
+
+          for (const ing of ings) {
+            const k = this.itemIndexes[ing.item.name];
+
+            if (k !== undefined) {
+              A.setIndex(i, k, rational_1.zero.sub(ing.amount));
+            }
+          }
+
+          for (const ing of recipe.products) {
+            const k = this.itemIndexes[ing.item.name];
+            A.addIndex(i, k, ing.amount.mul(prod));
+          }
+        } else {
+          for (let j = 0; j < this.items.length; j++) {
+            const n = A.index(i, j);
+
+            if (!rational_1.zero.less(n)) {
+              continue;
+            }
+
+            A.setIndex(i, j, n.mul(prod));
+          }
+        }
+      }
+    }
+
+    this.setCost(A);
+    this.lastProblem = A.copy(); // Solve.
+
+    simplex_1.simplex(A); // Convert array of rates into map from recipe name to rate.
+
+    const solution = {};
+
+    for (let i = 0; i < this.recipes.length; i++) {
+      const col = this.items.length + i + 1;
+      const rate = A.index(A.rows - 1, col);
+
+      if (rational_1.zero.less(rate)) {
+        solution[this.recipes[i].name] = rate;
+      }
+    }
+
+    const waste = {};
+
+    for (let i = 0; i < this.outputItems.length; i++) {
+      const rate = A.index(A.rows - 1, i);
+
+      if (rational_1.zero.less(rate)) {
+        waste[this.outputItems[i].name] = rate;
+      }
+    }
+
+    this.lastSolution = A;
+    return {
+      solution,
+      waste
+    };
+  }
+
+}
+
+exports.MatrixSolver = MatrixSolver;
+
+},{"./matrix":46,"./rational":48,"./simplex":51,"./window-interface":57}],57:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+const windowTempGlobals = window;
+exports.window = windowTempGlobals;
+const windowInitState = window;
+exports.InitState = windowInitState;
+const windowSettingsState = window;
+exports.SettingsState = windowSettingsState;
+const windowIconState = window;
+exports.IconState = windowIconState;
+
+const d3 = require("d3");
+
+const circlepath_1 = require("./circlepath");
+
+const dropdown_1 = require("./dropdown");
+
+const factory_1 = require("./factory");
+
+const fuel_1 = require("./fuel");
+
+const icon_1 = require("./icon");
+
+const init_1 = require("./init");
+
+const item_1 = require("./item");
+
+const matrix_1 = require("./matrix");
+
+const module_1 = require("./module");
+
+const rational_1 = require("./rational");
+
+const recipe_1 = require("./recipe");
+
+const settings_1 = require("./settings");
+
+const simplex_1 = require("./simplex");
+
+const sort_1 = require("./sort");
+
+const subgraph_1 = require("./subgraph");
+
+const totals_1 = require("./totals");
+
+const vectorize_1 = require("./vectorize");
+
+function initWindow() {
+  // d3
+  window.d3 = d3; // circlepath.ts
+
+  window.CirclePath = circlepath_1.CirclePath;
+  window.makeCurve = circlepath_1.makeCurve; // dropdown.ts
+
+  window.makeDropdown = dropdown_1.makeDropdown;
+  window.addInputs = dropdown_1.addInputs; // factory.ts
+
+  window.FactoryDef = factory_1.FactoryDef;
+  window.Factory = factory_1.Factory;
+  window.FactorySpec = factory_1.FactorySpec; // fuel.ts
+
+  window.Fuel = fuel_1.Fuel; // icon.ts
+
+  window.PX_WIDTH = icon_1.PX_WIDTH;
+  window.PX_HEIGHT = icon_1.PX_HEIGHT;
+  window.getImage = icon_1.getImage;
+  window.getExtraImage = icon_1.getExtraImage; // init.ts
+
+  window.reset = init_1.reset;
+  window.loadData = init_1.loadData; // item.ts
+
+  window.Item = item_1.Item;
+  window.getItem = item_1.getItem; // matrix.ts
+
+  window.Matrix = matrix_1.Matrix; // module.ts
+
+  window.Module = module_1.Module;
+  window.moduleDropdown = module_1.moduleDropdown; // rational.ts
+
+  window.Rational = rational_1.Rational;
+  window.RationalFromString = rational_1.RationalFromString;
+  window.RationalFromFloat = rational_1.RationalFromFloat;
+  window.RationalFromFloats = rational_1.RationalFromFloats;
+  window.minusOne = rational_1.minusOne;
+  window.zero = rational_1.zero;
+  window.one = rational_1.one;
+  window.half = rational_1.half; // recipe.ts
+
+  window.Ingredient = recipe_1.Ingredient;
+  window.Recipe = recipe_1.Recipe;
+  window.MiningRecipe = recipe_1.MiningRecipe; // settings.ts
+
+  window.currentMod = settings_1.currentMod;
+  window.setColorScheme = settings_1.setColorScheme;
+  window.setMinimumAssembler = settings_1.setMinimumAssembler;
+  window.setPreferredFuel = settings_1.setPreferredFuel;
+  window.setOilRecipe = settings_1.setOilRecipe;
+  window.setKovarex = settings_1.setKovarex;
+  window.setPreferredBelt = settings_1.setPreferredBelt;
+  window.setMinPipe = settings_1.setMinPipe;
+  window.getMprod = settings_1.getMprod; // simplex.ts
+
+  window.simplex = simplex_1.simplex; // sort.ts
+
+  window.sorted = sort_1.sorted; // subgraph.ts
+
+  window.findGroups = subgraph_1.findGroups; // totals.ts
+
+  window.Totals = totals_1.Totals; // vectorize.ts
+
+  window.MatrixSolver = vectorize_1.MatrixSolver;
+}
+
+exports.initWindow = initWindow;
+
+},{"./circlepath":37,"./dropdown":40,"./factory":41,"./fuel":42,"./icon":43,"./init":44,"./item":45,"./matrix":46,"./module":47,"./rational":48,"./recipe":49,"./settings":50,"./simplex":51,"./sort":52,"./subgraph":53,"./totals":55,"./vectorize":56,"d3":33}]},{},[44]);

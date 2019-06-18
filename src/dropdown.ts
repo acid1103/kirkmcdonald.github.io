@@ -106,7 +106,6 @@ function addInputs<A extends d3.BaseType, B, C extends d3.BaseType, D>(
 // }
 
 export {
-    toggleDropdown,
     makeDropdown,
     addInputs,
 };

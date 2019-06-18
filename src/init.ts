@@ -1,11 +1,16 @@
 import $ = require("jquery");
 import { getBelts } from "./belt";
 import { Data } from "./data";
-import { InitState, SettingsState, window as TEMP_WINDOW_STORAGE } from "./globals";
 import { getSprites } from "./icon";
+import { getModules } from "./module";
 import { RationalFromFloat } from "./rational";
 import { addOverrideOptions, currentMod, renderDataSetOptions, renderSettings } from "./settings";
 import { IObjectMap } from "./utility-types";
+import { InitState, initWindow, SettingsState, window as TEMP_WINDOW_STORAGE } from "./window-interface";
+import { getFactories, FactorySpec } from "./factory";
+import { getRecipeGraph } from "./recipe";
+import { getFuel } from "./fuel";
+import { sorted } from "./sort";
 
 // postpone initing until the DOM has been fully loaded
 const readyStateCheckInterval = setInterval(() => {
@@ -92,9 +97,9 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
     }
     loadDataRunner(modName, function(data) {
         getSprites(data);
-        const graph = TEMP_WINDOW_STORAGE.getRecipeGraph(data);
-        InitState.modules = TEMP_WINDOW_STORAGE.getModules(data);
-        InitState.sortedModules = TEMP_WINDOW_STORAGE.sorted(InitState.modules, (m: string) => InitState.modules[m].order);
+        const graph = getRecipeGraph(data);
+        InitState.modules = getModules(data);
+        InitState.sortedModules = sorted(InitState.modules, (m: string) => InitState.modules[m].order);
         InitState.moduleRows = [];
         let category = null;
         for (const moduleName of InitState.sortedModules) {
@@ -110,8 +115,8 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
             const module = InitState.modules[moduleName];
             InitState.shortModules[module.shortName()] = module;
         }
-        const factories = TEMP_WINDOW_STORAGE.getFactories(data);
-        InitState.spec = new TEMP_WINDOW_STORAGE.FactorySpec(factories);
+        const factories = getFactories(data);
+        InitState.spec = new FactorySpec(factories);
         if ("ignore" in settings) {
             const ignore = settings.ignore.split(",");
             for (let i = 0; i < ignore.length; i++) {
@@ -123,7 +128,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
         const recipes = graph[1];
 
         InitState.belts = getBelts(data);
-        InitState.fuel = TEMP_WINDOW_STORAGE.getFuel(data, items).chemical;
+        InitState.fuel = getFuel(data, items).chemical;
 
         InitState.itemGroups = TEMP_WINDOW_STORAGE.getItemGroups(items, data);
         InitState.solver = new TEMP_WINDOW_STORAGE.Solver(items, recipes);
@@ -234,3 +239,5 @@ export {
     reset,
     loadData,
 };
+
+initWindow();

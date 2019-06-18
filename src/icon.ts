@@ -1,5 +1,5 @@
 import { Data } from "./data";
-import { IconState, SettingsState } from "./globals";
+import { IconState, SettingsState } from "./window-interface";
 import { Tooltip } from "./tooltip";
 import { IObjectMap } from "./utility-types";
 
@@ -13,7 +13,7 @@ interface IIconned {
 const PX_WIDTH = 32;
 const PX_HEIGHT = 32;
 
-IconState.sheet_hash = null;
+// IconState.sheet_hash = null;
 
 class Sprite implements IIconned {
     public name: string;
