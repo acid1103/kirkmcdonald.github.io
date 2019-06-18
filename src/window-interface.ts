@@ -2,20 +2,34 @@ const windowTempGlobals = window as unknown as TempGlobals;
 const windowInitState = window as unknown as InitState;
 const windowSettingsState = window as unknown as SettingsState;
 const windowIconState = window as unknown as IconState;
+const windowDisplayState = window as unknown as DisplayState;
+const windowEventsState = window as unknown as EventsState;
+const windowTargetState = window as unknown as TargetState;
 
 export {
     windowTempGlobals as window,
     windowInitState as InitState,
     windowSettingsState as SettingsState,
     windowIconState as IconState,
+    windowDisplayState as DisplayState,
+    windowEventsState as EventsState,
+    windowTargetState as TargetState,
 };
 
+export type GraphEdge = any;
+export type GraphNode = any;
+
 import d3 = require("d3");
+import dagre = require("dagre");
+import pako = require("pako");
+import { sprintf } from "sprintf-js";
 import { Belt } from "./belt";
 import { CirclePath, makeCurve } from "./circlepath";
 import { ColorScheme } from "./color";
+import { RecipeTable, displayCount, displayRate, formatName } from "./display";
 import { addInputs, makeDropdown } from "./dropdown";
 import { Factory, FactoryDef, FactorySpec } from "./factory";
+import { formatSettings } from "./fragment";
 import { Fuel } from "./fuel";
 import { getExtraImage, getImage, PX_HEIGHT, PX_WIDTH } from "./icon";
 import { loadData, reset } from "./init";
@@ -47,131 +61,49 @@ import {
     setPreferredFuel,
 } from "./settings";
 import { simplex } from "./simplex";
+import { Solver } from "./solve";
 import { sorted } from "./sort";
-import { findGroups } from "./subgraph";
+import { findGroups } from "./subgraphs";
+import { BuildTarget } from "./target";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
 import { MatrixSolver } from "./vectorize";
+import { GraphClickHandler, GraphMouseLeaveHandler, GraphMouseOverHandler } from "./events";
+import { colorList, getColorMaps, iconSize, imageViewBox, renderNode } from "./visualize";
 
 export function initWindow() {
-    // d3
-    (window as any).d3 = d3;
+    // // dagre
+    // (window as any).dagre = dagre;
+    // (window as any).displayRate = displayRate;
+    // (window as any).formatName = formatName;
 
-    // circlepath.ts
-    (window as any).CirclePath = CirclePath;
-    (window as any).makeCurve = makeCurve;
+    // // events.ts
+    // (window as any).GraphClickHandler = GraphClickHandler;
+    // (window as any).GraphMouseLeaveHandler = GraphMouseLeaveHandler;
+    // (window as any).GraphMouseOverHandler = GraphMouseOverHandler;
 
-    // dropdown.ts
-    (window as any).makeDropdown = makeDropdown;
-    (window as any).addInputs = addInputs;
-
-    // factory.ts
-    (window as any).FactoryDef = FactoryDef;
-    (window as any).Factory = Factory;
-    (window as any).FactorySpec = FactorySpec;
-
-    // fuel.ts
-    (window as any).Fuel = Fuel;
-
-    // icon.ts
-    (window as any).PX_WIDTH = PX_WIDTH;
-    (window as any).PX_HEIGHT = PX_HEIGHT;
-    (window as any).getImage = getImage;
-    (window as any).getExtraImage = getExtraImage;
-
-    // init.ts
-    (window as any).reset = reset;
-    (window as any).loadData = loadData;
-
-    // item.ts
-    (window as any).Item = Item;
-    (window as any).getItem = getItem;
-
-    // matrix.ts
-    (window as any).Matrix = Matrix;
-
-    // module.ts
-    (window as any).Module = Module;
-    (window as any).moduleDropdown = moduleDropdown;
-
-    // rational.ts
-    (window as any).Rational = Rational;
-    (window as any).RationalFromString = RationalFromString;
-    (window as any).RationalFromFloat = RationalFromFloat;
-    (window as any).RationalFromFloats = RationalFromFloats;
-    (window as any).minusOne = minusOne;
-    (window as any).zero = zero;
-    (window as any).one = one;
-    (window as any).half = half;
-
-    // recipe.ts
-    (window as any).Ingredient = Ingredient;
-    (window as any).Recipe = Recipe;
-    (window as any).MiningRecipe = MiningRecipe;
-
-    // settings.ts
-    (window as any).currentMod = currentMod;
-    (window as any).setColorScheme = setColorScheme;
-    (window as any).setMinimumAssembler = setMinimumAssembler;
-    (window as any).setPreferredFuel = setPreferredFuel;
-    (window as any).setOilRecipe = setOilRecipe;
-    (window as any).setKovarex = setKovarex;
-    (window as any).setPreferredBelt = setPreferredBelt;
-    (window as any).setMinPipe = setMinPipe;
-    (window as any).getMprod = getMprod;
-
-    // simplex.ts
-    (window as any).simplex = simplex;
-
-    // sort.ts
-    (window as any).sorted = sorted;
-
-    // subgraph.ts
-    (window as any).findGroups = findGroups;
-
-    // totals.ts
-    (window as any).Totals = Totals;
-
-    // vectorize.ts
-    (window as any).MatrixSolver = MatrixSolver;
+    // // visualize.ts
+    // (window as any).colorList = colorList;
+    // (window as any).getColorMaps = getColorMaps;
+    // (window as any).iconSize = iconSize;
+    // (window as any).imageViewBox = imageViewBox;
+    // (window as any).renderNode = renderNode;
 }
 
 // tslint:disable: interface-over-type-literal
 type TempGlobals = {
-    pipeThroughput: (minPipeLength: any) => any;
-    changeFurnace: (d: any, i: any) => any;
-    changeFuel: (d: any, i: any) => any;
-    changeOil: (d: any, i: any) => any;
-    changeBelt: (d: any, i: any) => any;
-    changeDefaultModule: (module: Module) => void;
-    changeDefaultBeacon: (module: Module) => void;
-    build_targets: any[];
-    RecipeTable: any;
-    getItemGroups: (items: any, data: any) => any;
-    Solver: any;
-    addTarget: (name?: any) => any;
-    itemUpdate: () => any;
-    pruneSpec: (globalTotals: any) => any;
-    globalTotals: (globalTotals: any) => any;
-    formatSettings: () => any;
-    loadSettings: (hash: any) => any;
-    currentTab: string;
-    clickTab: (currentTab: any) => any;
-    displayRateHandler: (this: HTMLInputElement, ev: Event) => any;
-    changeMin: (arg0: string) => any;
-    BeltIcon: any;
 };
 
 type InitState = {
-    recipeTable: any; // TODO RecipeTable type instead of any
-    solver: any; // TODO Solver type instead of any
+    recipeTable: RecipeTable;
+    solver: Solver;
     spec: FactorySpec;
     modules: IObjectMap<Module>;
     sortedModules: string[];
     shortModules: IObjectMap<Module>;
     moduleRows: Module[][];
     belts: Belt[];
-    fuel: any; // TODO Fuel[] type instead of any
+    fuel: Fuel[];
     itemGroups: Item[][][];
     useLegacyCalculations: boolean;
     spriteSheetSize: number[];
@@ -201,7 +133,7 @@ type SettingsState = {
     minimumAssembler: string;
     DEFAULT_FURNACE: string;
     DEFAULT_FUEL: string;
-    preferredFuel: any; // TODO Fuel type instead of any type
+    preferredFuel: Fuel;
     OIL_OPTIONS: Oil[];
     DEFAULT_OIL: string;
     OIL_EXCLUSION: IObjectMap<IObjectMap<boolean>>;
@@ -234,4 +166,16 @@ type SettingsState = {
 
 type IconState = {
     sheet_hash: string;
+};
+
+type DisplayState = {
+    sortOrder: string;
+};
+
+type EventsState = {
+    currentTab: string;
+};
+
+type TargetState = {
+    build_targets: BuildTarget[];
 };

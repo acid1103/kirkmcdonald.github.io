@@ -19,23 +19,10 @@ Comment out Kirk's ga while developing
 </script>
 -->
     <script src="dist.js"></script>
-    <script src="third_party/dagre.min.js"></script>
     <script type="module">
         import * as d3sankey from "./d3-sankey/index.js"
         window.d3sankey = d3sankey
     </script>
-    <script src="third_party/pako.min.js"></script>
-    <script src="third_party/sprintf.js"></script>
-    <script src="boxline.js"></script>
-    <script src="group.js"></script>
-    <script src="solve.js"></script>
-    <script src="fragment.js"></script>
-    <script src="events.js"></script>
-    <script src="target.js"></script>
-    <script src="steps.js"></script>
-    <script src="display.js"></script>
-    <script src="visualize.js"></script>
-    <script src="debug.js"></script>
 </head>
 
 <!--Copyright 2015-2019 Kirk McDonald
@@ -56,7 +43,7 @@ limitations under the License.-->
     <table>
     <tr>
     <td id="targetparent">
-    <ul id="targets" class="targets"><li><button class="targetButton ui" title="Add new item." onclick="plusHandler()">+</a></li></ul>
+    <ul id="targets" class="targets"><li><button id="add_item" class="targetButton ui" title="Add new item.">+</a></li></ul>
     </td>
 
     <td class="changecell">
@@ -71,13 +58,13 @@ limitations under the License.-->
     </table>
 
     <div class="tabs">
-        <button class="tab_button" id="totals_button" onclick="clickTab('totals_tab')">Factory</button>
+        <button class="tab_button" id="totals_button">Factory</button>
         <!--<button class="tab_button" id="steps_button" onclick="clickTab('steps_tab')">Items</button>-->
-        <button class="tab_button" id="graph_button" onclick="clickVisualize('graph_tab')">Visualize</button>
-        <button class="tab_button" id="settings_button" onclick="clickTab('settings_tab')">Settings</button>
-        <button class="tab_button" id="faq_button" onclick="clickTab('faq_tab')">FAQ</button>
-        <button class="tab_button" id="about_button" onclick="clickTab('about_tab')">About</button>
-        <button class="tab_button" id="debug_button" onclick="clickTab('debug_tab')">Debug</button>
+        <button class="tab_button" id="graph_button">Visualize</button>
+        <button class="tab_button" id="settings_button">Settings</button>
+        <button class="tab_button" id="faq_button">FAQ</button>
+        <button class="tab_button" id="about_button">About</button>
+        <button class="tab_button" id="debug_button">Debug</button>
     </div>
 
     <div id="steps_tab" class="tab">
@@ -87,14 +74,14 @@ limitations under the License.-->
 
     <div id="totals_tab" class="tab">
         <table id="totals"></table>
-        <span class="displaylink">[<a onclick="toggleVisible('csv_box')">CSV</a>]</span>
+        <span class="displaylink">[<a id="csv_button">CSV</a>]</span>
         <div id="csv_box" style="display: none;"><textarea id="csv" readonly></textarea></div>
     </div>
 
     <div id="graph_tab" class="tab graph">
         <div id="graph-wrapper">
             <div class="graph-button">
-                <span class="graph-button-span" onclick="toggleVisualizerSettings()">
+                <span class="graph-button-span" id="visualizer_settings_toggle">
                     <svg class="gear" viewBox="0 0 32 32" width="32" height="32">
                         <use href="images/icons.svg#gear" />
                     </svg>
@@ -109,15 +96,13 @@ limitations under the License.-->
                             name="visualization"
                             id="vis_sankey"
                             value="sankey"
-                            checked 
-                            onchange="changeVisualizerType(event)">
+                            checked>
                         <label for="vis_sankey">Sankey diagram</label><br />
                         <input
                             type="radio"
                             name="visualization"
                             id="vis_box"
-                            value="box"
-                            onchange="changeVisualizerType(event)">
+                            value="box">
                         <label for="vis_box">Boxes and lines</label>
                     </div>
 
@@ -128,15 +113,13 @@ limitations under the License.-->
                             name="vis-direction"
                             id="visdir_right"
                             value="right"
-                            checked
-                            onchange="changeVisualizerDirection(event)">
+                            checked>
                         <label for="visdir_right">Horizontal</label><br />
                         <input
                             type="radio"
                             name="vis-direction"
                             id="visdir_down"
-                            value="down"
-                            onchange="changeVisualizerDirection(event)">
+                            value="down">
                         <label for="visdir_down">Vertical</label>
                     </div>
 
@@ -147,7 +130,6 @@ limitations under the License.-->
                             class="length"
                             type="number"
                             min="0"
-                            onchange="changeNodeBreadth(event)"
                             title="Breadth of largest node in Sankey diagrams. Proportional to breadth of whole diagram."
                         /> pixels
                     </div>
@@ -159,7 +141,6 @@ limitations under the License.-->
                             class="length"
                             type="number"
                             min="0"
-                            onchange="changeLinkLength(event)"
                             title="Distance between ranks in Sankey diagrams. Proportional to length of whole diagram."
                         /> pixels
                     </div>
@@ -175,12 +156,12 @@ limitations under the License.-->
         <table>
         <tr>
         <td class="setting-label">Use recipe set:</td>
-        <td><select id="data_set" onchange="changeMod()"></select></td>
+        <td><select id="data_set"></select></td>
         </tr>
 
         <tr>
         <td class="setting-label">Color scheme:</td>
-        <td><select id="color_scheme" onchange="changeColor(event)"></select></td>
+        <td><select id="color_scheme"></select></td>
         </tr>
 
         <tr>
@@ -190,11 +171,11 @@ limitations under the License.-->
 
         <tr>
         <td class="setting-label">Rate precision:</td>
-        <td><input id="rprec" class="prec" type="number" value="3" min="0" onchange="changeRPrec(event)"></td>
+        <td><input id="rprec" class="prec" type="number" value="3" min="0"></td>
         </tr>
         <tr>
         <td class="setting-label">Factory precision:</td>
-        <td><input id="fprec" class="prec" type="number" value="1" min="0" onchange="changeFPrec(event)"></td>
+        <td><input id="fprec" class="prec" type="number" value="1" min="0"></td>
         </tr>
 
         <tr>
@@ -219,7 +200,7 @@ limitations under the License.-->
 
         <tr>
         <td class="setting-label"><label for="kovarex">Enable Kovarex processing:</label></td>
-        <td><input type="checkbox" id="kovarex" onchange="changeKovarex(event)" checked></td>
+        <td><input type="checkbox" id="kovarex" checked></td>
         </tr>
 
         <tr>
@@ -229,12 +210,12 @@ limitations under the License.-->
 
         <tr>
         <td class="setting-label">Minimum pipe length:</td>
-        <td><input id="pipe_length" class="length" type="number" value="17" min="0" onchange="changePipeLength(event)"></td>
+        <td><input id="pipe_length" class="length" type="number" value="17" min="0"></td>
         </tr>
 
         <tr>
         <td class="setting-label">Mining productivity bonus:</td>
-        <td>+<input id="mprod" class="mprod" type="number" step="2" value="0" min="0" onchange="changeMprod()">%</td>
+        <td>+<input id="mprod" class="mprod" type="number" step="2" value="0" min="0">%</td>
         </tr>
 
         <tr>
@@ -244,28 +225,28 @@ limitations under the License.-->
 
         <tr>
         <td class="setting-label">Default beacon:</td>
-        <td><span id="default_beacon"></span> &times; <input id="default_beacon_count" class="beacon" type="number" value="0" onchange="changeDefaultBeaconCount(event)"></td>
+        <td><span id="default_beacon"></span> &times; <input id="default_beacon_count" class="beacon" type="number" value="0"></td>
         </tr>
 
         <tr>
         <td class="setting-label top">Recipe sort order:</td>
-        <td><input type="radio" name="sort_order" id="topo_order" value="topo" checked onchange="changeSortOrder(event)">
+        <td><input type="radio" name="sort_order" id="topo_order" value="topo" checked>
         <label for="topo_order">Topological order</label><br />
-        <input type="radio" name="sort_order" id="alpha_order" value="alpha" onchange="changeSortOrder(event)">
+        <input type="radio" name="sort_order" id="alpha_order" value="alpha">
         <label for="alpha_order">Alphabetical order</label></td>
         </tr>
 
         <tr>
         <td class="setting-label top">Format values as:</td>
-        <td><input type="radio" name="format" id="decimal_format" value="decimal" checked onchange="changeFormat(event)">
+        <td><input type="radio" name="format" id="decimal_format" value="decimal" checked>
         <label for="decimal_format">Decimals</label><br />
-        <input type="radio" name="format" id="rational_format" value="rational" onchange="changeFormat(event)">
+        <input type="radio" name="format" id="rational_format" value="rational">
         <label for="rational_format">Rationals</label></td>
         </tr>
 
         <tr>
         <td class="setting-label"><label for="tooltip">Fancy tooltips (requires refresh):</label></td>
-        <td><input type="checkbox" id="tooltip" onchange="changeTooltip(event)" checked></td>
+        <td><input type="checkbox" id="tooltip" checked></td>
         </tr>
         </table>
     </div>
@@ -315,7 +296,7 @@ limitations under the License.-->
 
     <div id="debug_tab" class="tab">
         <label for="render_debug">Render debug tab:</label>
-        <input type="checkbox" id="render_debug" onchange="toggleDebug(event)"><br>
+        <input type="checkbox" id="render_debug"><br>
         Last solution:
         <div id="solution"></div>
         Recipe matrixes:

@@ -1,16 +1,47 @@
+import d3 = require("d3");
 import $ = require("jquery");
 import { getBelts } from "./belt";
 import { Data } from "./data";
+import { globalTotals, itemUpdate, pruneSpec, RecipeTable } from "./display";
+import {
+    changeColor,
+    changeDefaultBeaconCount,
+    changeFormat,
+    changeFPrec,
+    changeKovarex,
+    changeLinkLength,
+    changeMod,
+    changeMprod,
+    changeNodeBreadth,
+    changePipeLength,
+    changeRPrec,
+    changeSortOrder,
+    changeTooltip,
+    changeVisualizerDirection,
+    changeVisualizerType,
+    clickTab,
+    clickVisualize,
+    plusHandler,
+    toggleDebug,
+    toggleVisible,
+    toggleVisualizerSettings,
+} from "./events";
+import { FactorySpec, getFactories } from "./factory";
+import { formatSettings, loadSettings } from "./fragment";
+import { getFuel } from "./fuel";
+import { getItemGroups } from "./group";
 import { getSprites } from "./icon";
 import { getModules } from "./module";
 import { RationalFromFloat } from "./rational";
-import { addOverrideOptions, currentMod, renderDataSetOptions, renderSettings } from "./settings";
-import { IObjectMap } from "./utility-types";
-import { InitState, initWindow, SettingsState, window as TEMP_WINDOW_STORAGE } from "./window-interface";
-import { getFactories, FactorySpec } from "./factory";
 import { getRecipeGraph } from "./recipe";
-import { getFuel } from "./fuel";
+import { addOverrideOptions, currentMod, renderDataSetOptions, renderSettings } from "./settings";
+import { Solver } from "./solve";
 import { sorted } from "./sort";
+import { addTarget } from "./target";
+import { IObjectMap } from "./utility-types";
+import { EventsState, InitState, initWindow, SettingsState, TargetState } from "./window-interface";
+
+(window as any).d3 = d3;
 
 // postpone initing until the DOM has been fully loaded
 const readyStateCheckInterval = setInterval(() => {
@@ -54,7 +85,7 @@ InitState.OVERRIDE = null;
 function reset() {
     window.location.hash = "";
 
-    TEMP_WINDOW_STORAGE.build_targets = [];
+    TargetState.build_targets = [];
     const targetList = $("#targets");
     const plus = $("#targets").children(":last-child");
     const newTargetList = $('<ul id="targets" class="targets">');
@@ -91,7 +122,7 @@ function loadDataRunner(modName: string, callback: (data: Data) => void) {
 }
 
 function loadData(modName: string, settings?: IObjectMap<string>) {
-    InitState.recipeTable = new TEMP_WINDOW_STORAGE.RecipeTable($("#totals")[0]);
+    InitState.recipeTable = new RecipeTable($("#totals")[0]);
     if (!settings) {
         settings = {};
     }
@@ -130,8 +161,8 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
         InitState.belts = getBelts(data);
         InitState.fuel = getFuel(data, items).chemical;
 
-        InitState.itemGroups = TEMP_WINDOW_STORAGE.getItemGroups(items, data);
-        InitState.solver = new TEMP_WINDOW_STORAGE.Solver(items, recipes);
+        InitState.itemGroups = getItemGroups(items, data);
+        InitState.solver = new Solver(items, recipes);
 
         renderSettings(settings);
 
@@ -143,7 +174,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
                 const targetString = targets[i];
                 const parts = targetString.split(":");
                 const name = parts[0];
-                const target = TEMP_WINDOW_STORAGE.addTarget(name);
+                const target = addTarget(name);
                 const type = parts[1];
                 if (type === "f") {
                     const j = parts[2].indexOf(";");
@@ -162,7 +193,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
                 }
             }
         } else {
-            TEMP_WINDOW_STORAGE.addTarget();
+            addTarget();
         }
         if ("modules" in settings && settings.modules !== "") {
             const moduleSettings = settings.modules.split(",");
@@ -212,27 +243,65 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
             }
         }
         InitState.initDone = true;
-        TEMP_WINDOW_STORAGE.itemUpdate();
+        itemUpdate();
 
         // Prune factory spec after first solution is calculated.
-        TEMP_WINDOW_STORAGE.pruneSpec(TEMP_WINDOW_STORAGE.globalTotals);
-        window.location.hash = "#" + TEMP_WINDOW_STORAGE.formatSettings();
+        pruneSpec(globalTotals);
+        window.location.hash = "#" + formatSettings();
     });
 }
 
 function init() {
-    const settings = TEMP_WINDOW_STORAGE.loadSettings(window.location.hash);
+    $("#add_item").click(plusHandler);
+
+    $("#totals_button").click(() => clickTab("totals_tab"));
+    $("#graph_button").click(() => clickVisualize("graph_tab"));
+    $("#settings_button").click(() => clickTab("settings_tab"));
+    $("#faq_button").click(() => clickTab("faq_tab"));
+    $("#about_button").click(() => clickTab("about_tab"));
+    $("#debug_button").click(() => clickTab("debug_tab"));
+
+    $("#csv_button").click(() => toggleVisible("csv_box"));
+
+    $("#visualizer_settings_toggle").click(toggleVisualizerSettings);
+
+    $("#vis_sankey").change(changeVisualizerType);
+    $("#vis_box").change(changeVisualizerType);
+
+    $("#visdir_right").change(changeVisualizerDirection);
+    $("#visdir_down").change(changeVisualizerDirection);
+
+    $("#vis-node-breadth").change(changeNodeBreadth);
+    $("#vis-link-length").change(changeLinkLength);
+
+    $("#data_set").change(changeMod);
+    $("#color_scheme").change(changeColor);
+    $("#rprec").change(changeRPrec);
+    $("#fprec").change(changeFPrec);
+    $("#kovarex").change(changeKovarex);
+    $("#pipe_length").change(changePipeLength);
+    $("#mprod").change(changeMprod);
+    $("#default_beacon_count").change(changeDefaultBeaconCount);
+    $("#topo_order").change(changeSortOrder);
+    $("#alpha_order").change(changeSortOrder);
+    $("#decimal_format").change(changeFormat);
+    $("#rational_format").change(changeFormat);
+    $("#tooltip").change(changeTooltip);
+
+    $("#render_debug").change(toggleDebug);
+
+    const settings = loadSettings(window.location.hash);
     if (InitState.OVERRIDE !== null) {
         addOverrideOptions(InitState.OVERRIDE);
     }
     renderDataSetOptions(settings);
     if ("tab" in settings) {
-        TEMP_WINDOW_STORAGE.currentTab = settings.tab + "_tab";
+        EventsState.currentTab = settings.tab + "_tab";
     }
     loadData(currentMod(), settings);
     // We don't need to call clickVisualize here, as we will properly render
     // the graph when we call itemUpdate() at the end of initialization.
-    TEMP_WINDOW_STORAGE.clickTab(TEMP_WINDOW_STORAGE.currentTab);
+    clickTab(EventsState.currentTab);
 }
 
 export {

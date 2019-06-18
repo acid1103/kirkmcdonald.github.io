@@ -1,6 +1,6 @@
 import { Data } from "./data";
-import { InitState } from "./window-interface";
 import { Rational, RationalFromFloat } from "./rational";
+import { InitState } from "./window-interface";
 
 export class Belt {
     public name: string;

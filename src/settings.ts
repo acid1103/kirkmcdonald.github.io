@@ -1,4 +1,5 @@
 import d3 = require("d3");
+import $ = require("jquery");
 import { colorSchemes } from "./color";
 import { addInputs, makeDropdown } from "./dropdown";
 import { getImage } from "./icon";
@@ -6,6 +7,9 @@ import { moduleDropdown } from "./module";
 import { one, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
 import { IObjectMap } from "./utility-types";
 import { InitState, SettingsState, window as TEMP_WINDOW_STORAGE } from "./window-interface";
+import { displayRateHandler, changeMin, changeFurnace, changeFuel, changeOil, changeBelt, changeDefaultModule, changeDefaultBeacon } from "./events";
+import { BeltIcon } from "./display";
+import { pipeThroughput } from "./steps";
 
 class Modification {
     public name: string;
@@ -201,7 +205,7 @@ function renderRateOptions(settings: IObjectMap<string>) {
         if (rate.equal(SettingsState.displayRateFactor)) {
             input.checked = true;
         }
-        input.addEventListener("change", TEMP_WINDOW_STORAGE.displayRateHandler);
+        $(input).change(displayRateHandler);
         node.appendChild(input);
         const label = document.createElement("label");
         label.htmlFor = name + "_rate";
@@ -246,7 +250,7 @@ function renderMinimumAssembler(settings: IObjectMap<string>) {
         inputs,
         "assembler_dropdown",
         (d, i) => String(i + 1) === min,
-        (d, i) => TEMP_WINDOW_STORAGE.changeMin(String(i + 1)),
+        (d, i) => changeMin(String(i + 1)),
     );
     labels.append((d: any) => getImage(d, false, dropdown.node()));
     cell.replaceChild(node, oldNode);
@@ -276,7 +280,7 @@ function renderFurnace(settings: IObjectMap<string>) {
         inputs,
         "furnace_dropdown",
         (d) => d.name === furnaceName,
-        TEMP_WINDOW_STORAGE.changeFurnace,
+        changeFurnace,
     );
     labels.append((d: any) => getImage(d, false, dropdown.node()));
     cell.replaceChild(node, oldNode);
@@ -298,7 +302,7 @@ function renderFuel(settings: IObjectMap<string>) {
         inputs,
         "fuel_dropdown",
         (d) => d.name === fuelName,
-        TEMP_WINDOW_STORAGE.changeFuel,
+        changeFuel,
     );
     labels.append((d: any) => {
         const im = getImage(d, false, dropdown.node());
@@ -334,7 +338,7 @@ function renderOil(settings: IObjectMap<string>) {
         inputs,
         "oil_dropdown",
         (d) => d.priority === oil,
-        TEMP_WINDOW_STORAGE.changeOil,
+        changeOil,
     );
     labels.append((d: any) => getImage(InitState.solver.recipes[d.name], false, dropdown.node()));
     cell.replaceChild(node, oldNode);
@@ -381,9 +385,9 @@ function renderBelt(settings: IObjectMap<string>) {
         inputs,
         "belt_dropdown",
         (d) => d.name === SettingsState.preferredBelt,
-        TEMP_WINDOW_STORAGE.changeBelt,
+        changeBelt,
     );
-    labels.append((d: any) => getImage(new TEMP_WINDOW_STORAGE.BeltIcon(InitState.solver.items[d.name], d.speed), false, dropdown.node()));
+    labels.append((d: any) => getImage(new BeltIcon(InitState.solver.items[d.name], d.speed), false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
 
@@ -408,7 +412,7 @@ function renderPipe(settings: IObjectMap<string>) {
 
 function setMinPipe(lengthString: string) {
     SettingsState.minPipeLength = RationalFromString(lengthString);
-    SettingsState.maxPipeThroughput = TEMP_WINDOW_STORAGE.pipeThroughput(SettingsState.minPipeLength);
+    SettingsState.maxPipeThroughput = pipeThroughput(SettingsState.minPipeLength);
 }
 
 function renderMiningProd(settings: IObjectMap<string>) {
@@ -442,7 +446,7 @@ function renderDefaultModule(settings: IObjectMap<string>) {
         d3.select(node),
         "default_module_dropdown",
         (d) => d === defaultModule,
-        TEMP_WINDOW_STORAGE.changeDefaultModule,
+        changeDefaultModule,
     );
     cell.replaceChild(node, oldDefMod);
 }
@@ -470,7 +474,7 @@ function renderDefaultBeacon(settings: IObjectMap<string>) {
         d3.select(node),
         "default_beacon_dropdown",
         (d: any) => d === defaultBeacon,
-        TEMP_WINDOW_STORAGE.changeDefaultBeacon,
+        changeDefaultBeacon,
         (d) => d === null || d.canBeacon(),
     );
     cell.replaceChild(node, oldDefMod);
