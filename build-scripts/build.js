@@ -26,8 +26,8 @@ if (serve) {
     var params = {
         port: 8000,
         host: 'localhost',
-        open: '/calc-ts.html',
-        watch: ['./calc-ts.html', './calc.css', './dropdown.css', './dist.js'],
+        open: '/calc.html',
+        watch: ['./calc.html', './calc.css', './dropdown.css', './dist.js'],
         logLevel: 2,
         wait: 1000
     };
