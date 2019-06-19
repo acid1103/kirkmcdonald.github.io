@@ -1,7 +1,7 @@
 import d3 = require("d3");
 import $ = require("jquery");
 import { Belt } from "./belt";
-import { display, FactoryRow, globalTotals, itemUpdate, RecipeRow } from "./display";
+import { display, FactoryRow, globalTotals, itemUpdate, RecipeRow, State as DisplayState } from "./display";
 import { FactoryDef } from "./factory";
 import { formatSettings } from "./fragment";
 import { Fuel } from "./fuel";
@@ -34,7 +34,7 @@ import { PipeConfig } from "./steps";
 import { addTarget, BuildTarget, isFactoryTarget } from "./target";
 import { IObjectMap } from "./utility-types";
 import { GraphNode, renderGraph } from "./visualize";
-import { DisplayState, EventsState, TargetState } from "./window-interface";
+import { EventsState, TargetState } from "./window-interface";
 
 // build target events
 

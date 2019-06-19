@@ -29,7 +29,11 @@ import { pipeLength } from "./steps";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
 import { renderGraph } from "./visualize";
-import { DisplayState, EventsState, TargetState } from "./window-interface";
+import { EventsState, TargetState } from "./window-interface";
+
+const State = {} as {
+    sortOrder: string;
+};
 
 function formatName(name: string) {
     name = name.replace(new RegExp("-", "g"), " ");
@@ -95,7 +99,7 @@ function alignPower(x: Rational, prec?: number) {
     return align(displayCount(x), prec) + " " + powerSuffixes[i];
 }
 
-DisplayState.sortOrder = "topo";
+State.sortOrder = "topo";
 
 function pruneSpec(totals: Totals) {
     let drop: string[] = [];
@@ -1034,7 +1038,7 @@ class RecipeTable {
     public displaySolution(totals: Totals) {
         this.setRecipeHeader();
         let sortedTotals;
-        if (DisplayState.sortOrder === "topo") {
+        if (State.sortOrder === "topo") {
             sortedTotals = totals.topo;
         } else {
             sortedTotals = sorted(totals.totals);
@@ -1196,6 +1200,7 @@ function display() {
 }
 
 export {
+    State,
     formatName,
     displayRate,
     displayCount,
