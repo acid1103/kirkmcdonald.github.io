@@ -35,23 +35,23 @@ function pivot(A: Matrix, row: number, col: number) {
 // }
 
 function pivotCol(A: Matrix, col: number) {
-    let best_ratio = null;
-    let best_row = null;
+    let bestRatio = null;
+    let bestRow = null;
     for (let row = 0; row < A.rows - 1; row++) {
         const x = A.index(row, col);
         if (!zero.less(x)) {
             continue;
         }
         const ratio = A.index(row, A.cols - 1).div(x);
-        if (best_ratio === null || ratio.less(best_ratio)) {
-            best_ratio = ratio;
-            best_row = row;
+        if (bestRatio === null || ratio.less(bestRatio)) {
+            bestRatio = ratio;
+            bestRow = row;
         }
     }
-    if (best_ratio !== null) {
-        pivot(A, best_row, col);
+    if (bestRatio !== null) {
+        pivot(A, bestRow, col);
     }
-    return best_row;
+    return bestRow;
 }
 
 // never used

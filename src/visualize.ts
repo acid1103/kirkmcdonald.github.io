@@ -337,8 +337,8 @@ const colonWidth = 12;
 const color = d3.scaleOrdinal(colorList);
 
 function imageViewBox(obj: IIconned) {
-    const x1 = obj.icon_col * PX_WIDTH + 0.5;
-    const y1 = obj.icon_row * PX_HEIGHT + 0.5;
+    const x1 = obj.iconCol * PX_WIDTH + 0.5;
+    const y1 = obj.iconRow * PX_HEIGHT + 0.5;
     return `${x1} ${y1} ${PX_WIDTH - 1} ${PX_HEIGHT - 1}`;
 }
 

@@ -43,8 +43,8 @@ function makeIngredient(data: Data, i: ISimpleItem, items: IObjectMap<Item>) {
 
 class Recipe implements IIconned {
     public name: string;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     public category: string;
     public time: Rational;
     public ingredients: Ingredient[];
@@ -61,8 +61,8 @@ class Recipe implements IIconned {
         products: Ingredient[],
     ) {
         this.name = name;
-        this.icon_col = col;
-        this.icon_row = row;
+        this.iconCol = col;
+        this.iconRow = row;
         this.category = category;
         this.time = time;
         this.ingredients = ingredients;
@@ -192,7 +192,7 @@ function makeRecipe(data: Data, d: IRecipes, items: IObjectMap<Item>) {
 
 class ResourceRecipe extends Recipe {
     constructor(item: Item) {
-        super(item.name, item.icon_col, item.icon_row, null, zero, [], [new Ingredient(one, item)]);
+        super(item.name, item.iconCol, item.iconRow, null, zero, [], [new Ingredient(one, item)]);
     }
 
     public makesResource() {
@@ -202,20 +202,20 @@ class ResourceRecipe extends Recipe {
 
 class MiningRecipe extends Recipe {
     public hardness: Rational;
-    public mining_time: Rational;
+    public miningTime: Rational;
     constructor(
         name: string,
         col: number,
         row: number,
         category: string,
         hardness: Rational,
-        mining_time: Rational,
+        miningTime: Rational,
         ingredients: Ingredient[],
         products: Ingredient[],
     ) {
         super(name, col, row, category, zero, ingredients || [], products);
         this.hardness = hardness;
-        this.mining_time = mining_time;
+        this.miningTime = miningTime;
     }
 
     public makesResource() {
@@ -237,8 +237,8 @@ function getRecipeGraph(data: Data): [IObjectMap<Item>, IObjectMap<Recipe>] {
     const water = getItem(data, items, "water");
     recipes.water = new Recipe(
         "water",
-        water.icon_col,
-        water.icon_row,
+        water.iconCol,
+        water.iconRow,
         "water",
         RationalFromFloats(1, 1200),
         [],

@@ -20,10 +20,10 @@ import { IObjectMap } from "./utility-types";
 
 class FactoryDef implements IIconned {
     public name: string;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     public categories: string[];
-    public max_ing: number;
+    public maxIng: number;
     public speed: Rational;
     public moduleSlots: number;
     public energyUsage: Rational;
@@ -33,17 +33,17 @@ class FactoryDef implements IIconned {
         col: number,
         row: number,
         categories: string[],
-        max_ingredients: number,
+        maxIngredients: number,
         speed: Rational,
         moduleSlots: number,
         energyUsage: Rational,
         fuel: string,
     ) {
         this.name = name;
-        this.icon_col = col;
-        this.icon_row = row;
+        this.iconCol = col;
+        this.iconRow = row;
         this.categories = categories;
-        this.max_ing = max_ingredients;
+        this.maxIng = maxIngredients;
         this.speed = speed;
         this.moduleSlots = moduleSlots;
         this.energyUsage = energyUsage;
@@ -74,11 +74,11 @@ class FactoryDef implements IIconned {
         title.appendChild(new Text(formatName(this.name)));
         t.appendChild(title);
         let b;
-        if (this.max_ing) {
+        if (this.maxIng) {
             b = document.createElement("b");
             b.textContent = "Max ingredients: ";
             t.appendChild(b);
-            t.appendChild(new Text(String(this.max_ing)));
+            t.appendChild(new Text(String(this.maxIng)));
             t.appendChild(document.createElement("br"));
         }
         b = document.createElement("b");
@@ -100,8 +100,8 @@ class FactoryDef implements IIconned {
 }
 
 class MinerDef extends FactoryDef {
-    public mining_power: Rational;
-    public mining_speed: Rational;
+    public miningPower: Rational;
+    public miningSpeed: Rational;
     constructor(
         name: string,
         col: number,
@@ -114,15 +114,15 @@ class MinerDef extends FactoryDef {
         fuel: string,
     ) {
         super(name, col, row, categories, 0, zero, moduleSlots, energyUsage, fuel);
-        this.mining_power = power;
-        this.mining_speed = speed;
+        this.miningPower = power;
+        this.miningSpeed = speed;
     }
 
     public less(other: MinerDef) {
-        if (useLegacyCalculations && !this.mining_power.equal(other.mining_power)) {
-            return this.mining_power.less(other.mining_power);
+        if (useLegacyCalculations && !this.miningPower.equal(other.miningPower)) {
+            return this.miningPower.less(other.miningPower);
         }
-        return this.mining_speed.less(other.mining_speed);
+        return this.miningSpeed.less(other.miningSpeed);
     }
 
     public makeFactory(spec: FactorySpec, recipe: Recipe) {
@@ -146,13 +146,13 @@ class MinerDef extends FactoryDef {
             b = document.createElement("b");
             b.textContent = "Mining power: ";
             t.appendChild(b);
-            t.appendChild(new Text(this.mining_power.toDecimal()));
+            t.appendChild(new Text(this.miningPower.toDecimal()));
             t.appendChild(document.createElement("br"));
         }
         b = document.createElement("b");
         b.textContent = "Mining speed: ";
         t.appendChild(b);
-        t.appendChild(new Text(this.mining_speed.toDecimal()));
+        t.appendChild(new Text(this.miningSpeed.toDecimal()));
         t.appendChild(document.createElement("br"));
         b = document.createElement("b");
         b.textContent = "Module slots: ";
@@ -168,13 +168,13 @@ class RocketLaunchDef extends FactoryDef {
         col: number,
         row: number,
         categories: string[],
-        max_ingredients: number,
+        maxIngredients: number,
         speed: Rational,
         moduleSlots: number,
         energyUsage: Rational,
         fuel: string,
     ) {
-        super(name, col, row, categories, max_ingredients, speed, moduleSlots, energyUsage, fuel);
+        super(name, col, row, categories, maxIngredients, speed, moduleSlots, energyUsage, fuel);
     }
 
     public makeFactory(spec: FactorySpec, recipe: Recipe) {
@@ -188,13 +188,13 @@ class RocketSiloDef extends FactoryDef {
         col: number,
         row: number,
         categories: string[],
-        max_ingredients: number,
+        maxIngredients: number,
         speed: Rational,
         moduleSlots: number,
         energyUsage: Rational,
         fuel: string,
     ) {
-        super(name, col, row, categories, max_ingredients, speed, moduleSlots, energyUsage, fuel);
+        super(name, col, row, categories, maxIngredients, speed, moduleSlots, energyUsage, fuel);
     }
 
     public makeFactory(spec: FactorySpec, recipe: Recipe) {
@@ -345,11 +345,11 @@ class Miner extends Factory {
         const miner = this.factory as MinerDef;
         let rate;
         if (useLegacyCalculations) {
-            rate = miner.mining_power.sub(recipe.hardness);
+            rate = miner.miningPower.sub(recipe.hardness);
         } else {
             rate = one;
         }
-        return rate.mul(miner.mining_speed).div(recipe.mining_time).mul(this.speedEffect(spec));
+        return rate.mul(miner.miningSpeed).div(recipe.miningTime).mul(this.speedEffect(spec));
     }
 
     public prodEffect(spec: FactorySpec) {
@@ -396,7 +396,7 @@ class RocketSilo extends Factory {
     }
 }
 
-const assembly_machine_categories = {
+const assemblyMachineCategories = {
     "advanced-crafting": true,
     "crafting": true,
     "crafting-with-fluid": true,
@@ -456,7 +456,7 @@ class FactorySpec {
     }
 
     public useMinimum(recipe: Recipe) {
-        return recipe.category in assembly_machine_categories;
+        return recipe.category in assemblyMachineCategories;
     }
 
     public setFurnace(name: string) {
@@ -484,7 +484,7 @@ class FactorySpec {
         let factoryDef;
         for (factoryDef of factories) {
             if (!(factoryDef.less(this.minimum) || useLegacyCalculations &&
-                factoryDef.max_ing < recipe.ingredients.length)) {
+                factoryDef.maxIng < recipe.ingredients.length)) {
                 break;
             }
         }
@@ -629,11 +629,11 @@ function getFactories(data: Data) {
     factories.push(reactor);
     const boilerDef = data.boiler.boiler;
     // XXX: Should derive this from game data.
-    let boiler_energy: Rational;
+    let boilerEnergy: Rational;
     if (useLegacyCalculations) {
-        boiler_energy = RationalFromFloat(3600000);
+        boilerEnergy = RationalFromFloat(3600000);
     } else {
-        boiler_energy = RationalFromFloat(1800000);
+        boilerEnergy = RationalFromFloat(1800000);
     }
     const boiler = new FactoryDef(
         "boiler",
@@ -643,7 +643,7 @@ function getFactories(data: Data) {
         1,
         one,
         0,
-        boiler_energy,
+        boilerEnergy,
         "chemical",
     );
     boiler.renderTooltip = renderTooltipBase;

@@ -162,8 +162,8 @@ class ItemIcon implements IIconned {
     public name: string;
     public extra: HTMLSpanElement;
     public span: HTMLSpanElement;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     constructor(item: Item, canIgnore: boolean) {
         this.item = item;
         this.name = item.name;
@@ -174,8 +174,8 @@ class ItemIcon implements IIconned {
             this.extra.appendChild(this.span);
             this.extra.appendChild(document.createElement("br"));
         }
-        this.icon_col = item.icon_col;
-        this.icon_row = item.icon_row;
+        this.iconCol = item.iconCol;
+        this.iconRow = item.iconRow;
     }
 
     public setText(text: string) {
@@ -191,8 +191,8 @@ class BeltIcon implements IIconned {
     public item: Item;
     public speed: Rational;
     public name: string;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     constructor(beltItem?: Item, beltSpeed?: Rational) {
         if (!beltItem) {
             beltItem = solver.items[preferredBelt];
@@ -203,8 +203,8 @@ class BeltIcon implements IIconned {
         this.item = beltItem;
         this.speed = beltSpeed;
         this.name = this.item.name;
-        this.icon_col = this.item.icon_col;
-        this.icon_row = this.item.icon_row;
+        this.iconCol = this.item.iconCol;
+        this.iconRow = this.item.iconRow;
     }
 
     public renderTooltip() {
@@ -1085,16 +1085,16 @@ class RecipeTable {
         const knownRows: IObjectMap<boolean> = {};
         const drop: string[] = [];
         for (let i = 0; i < groups.length; i++) {
-            const group = groups[i];
+            const currGroup = groups[i];
             // XXX: Bluh
-            let rowName = group.id;
+            let rowName = currGroup.id;
             if (!rowName) {
-                rowName = group.recipes[0].name;
+                rowName = currGroup.recipes[0].name;
             }
             knownRows[rowName] = true;
             let row: IRow = this.rows[rowName];
             let groupMatch = false;
-            if (group.id === null || row && row.groupMatches(group)) {
+            if (currGroup.id === null || row && row.groupMatches(currGroup)) {
                 groupMatch = true;
             }
             if (row && groupMatch) {
@@ -1107,9 +1107,9 @@ class RecipeTable {
                 }
                 row.setRates(totals, items);
             } else {
-                if (group.id === null) {
+                if (currGroup.id === null) {
                     const rate = totals.get(rowName);
-                    const recipe = group.recipes[0];
+                    const recipe = currGroup.recipes[0];
                     const itemName = recipe.products[0].item.name;
                     const itemRate = items[itemName];
                     const waste = totals.getWaste(rowName);
@@ -1118,7 +1118,7 @@ class RecipeTable {
                     if (row) {
                         row.remove();
                     }
-                    row = new GroupRow(group, items, totals);
+                    row = new GroupRow(currGroup, items, totals);
                 }
                 row.appendTo(this.node);
                 this.rows[rowName] = row;

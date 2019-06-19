@@ -62,10 +62,10 @@ function resetSearch(dropdown: HTMLElement) {
 function searchTargets(this: HTMLInputElement) {
     const ev = d3.event;
     const search = this;
-    const search_text = search.value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const searchText = search.value.toLowerCase().replace(/[^a-z0-9]+/g, "");
     const dropdown = d3.select(search.parentNode as HTMLElement);
 
-    if (!search_text) {
+    if (!searchText) {
         resetSearch(search.parentNode as HTMLElement);
         return;
     }
@@ -99,7 +99,7 @@ function searchTargets(this: HTMLInputElement) {
                 currentHrHasContent = false;
             } else {
                 const title = (item as any).name.replace(/-/g, ""); // TODO what type is item?
-                if (title.indexOf(search_text) === -1) {
+                if (title.indexOf(searchText) === -1) {
                     this.style.display = "none";
                 } else {
                     this.style.display = "";

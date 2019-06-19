@@ -9,8 +9,8 @@ import { IObjectMap } from "./utility-types";
 
 class Item implements IIconned {
     public name: string;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     public recipes: Recipe[];
     public uses: Recipe[];
     public phase: string;
@@ -20,8 +20,8 @@ class Item implements IIconned {
 
     constructor(name: string, col: number, row: number, phase: string, group: string, subgroup: string, order: string) {
         this.name = name;
-        this.icon_col = col;
-        this.icon_row = row;
+        this.iconCol = col;
+        this.iconRow = row;
         this.recipes = [];
         this.uses = [];
         this.phase = phase;

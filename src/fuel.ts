@@ -8,8 +8,8 @@ const energySuffixes = ["J", "kJ", "MJ", "GJ", "TJ", "PJ"];
 
 class Fuel implements IIconned {
     public name: string;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     public item: Item;
     public category: string;
     public value: Rational;
@@ -17,8 +17,8 @@ class Fuel implements IIconned {
 
     constructor(name: string, col: number, row: number, item: Item, category: string, value: Rational) {
         this.name = name;
-        this.icon_col = col;
-        this.icon_row = row;
+        this.iconCol = col;
+        this.iconRow = row;
         this.item = item;
         this.category = category;
         this.value = value;

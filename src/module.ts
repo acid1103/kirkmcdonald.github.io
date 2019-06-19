@@ -14,8 +14,8 @@ import { IObjectMap } from "./utility-types";
 
 class Module implements IIconned {
     public name: string;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     public category: string;
     public order: string;
     public productivity: Rational;
@@ -35,8 +35,8 @@ class Module implements IIconned {
     ) {
         // Other module effects not modeled by this calculator.
         this.name = name;
-        this.icon_col = col;
-        this.icon_row = row;
+        this.iconCol = col;
+        this.iconRow = row;
         this.category = category;
         this.order = order;
         this.productivity = productivity;

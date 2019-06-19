@@ -5,35 +5,35 @@ import { IObjectMap } from "./utility-types";
 
 interface IIconned {
     name: string;
-    icon_col: number;
-    icon_row: number;
+    iconCol: number;
+    iconRow: number;
     renderTooltip: (extra?: HTMLSpanElement) => HTMLDivElement;
 }
 
 const PX_WIDTH = 32;
 const PX_HEIGHT = 32;
 
-let sheet_hash: string;
+let sheetHash: string;
 
 class Sprite implements IIconned {
     public name: string;
-    public icon_col: number;
-    public icon_row: number;
+    public iconCol: number;
+    public iconRow: number;
     public renderTooltip: (extra?: HTMLSpanElement) => HTMLDivElement;
 
     constructor(name: string, col: number, row: number) {
         this.name = name;
-        this.icon_col = col;
-        this.icon_row = row;
+        this.iconCol = col;
+        this.iconRow = row;
     }
 }
 
 function getImage(obj: IIconned, suppressTooltip?: boolean, tooltipTarget?: HTMLElement) {
     const im = blankImage();
     im.classList.add("icon");
-    const x = -obj.icon_col * PX_WIDTH;
-    const y = -obj.icon_row * PX_HEIGHT;
-    im.style.setProperty("background", "url(images/sprite-sheet-" + sheet_hash + ".png)");
+    const x = -obj.iconCol * PX_WIDTH;
+    const y = -obj.iconRow * PX_HEIGHT;
+    im.style.setProperty("background", "url(images/sprite-sheet-" + sheetHash + ".png)");
     im.style.setProperty("background-position", x + "px " + y + "px");
     if (SettingsState.tooltipsEnabled && obj.renderTooltip && !suppressTooltip) {
         addTooltip(im, obj, tooltipTarget);
@@ -64,7 +64,7 @@ function getExtraImage(name: string) {
 }
 
 function getSprites(data: Data) {
-    sheet_hash = data.sprites.hash;
+    sheetHash = data.sprites.hash;
     sprites = {};
     for (const name of Object.keys(data.sprites.extra)) {
         const d = data.sprites.extra[name];
@@ -76,7 +76,7 @@ export {
     IIconned,
     PX_WIDTH,
     PX_HEIGHT,
-    sheet_hash,
+    sheetHash as sheet_hash,
     getImage,
     getExtraImage,
     getSprites,
