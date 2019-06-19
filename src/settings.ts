@@ -21,6 +21,7 @@ import { pipeThroughput } from "./steps";
 import { IObjectMap } from "./utility-types";
 import { SettingsState } from "./window-interface";
 
+// data set
 class Modification {
     public name: string;
     public filename: string;
@@ -34,15 +35,6 @@ class Modification {
     }
 }
 
-class Oil {
-    public name: string;
-    public priority: string;
-    constructor(recipeName: string, priorityName: string) {
-        this.name = recipeName;
-        this.priority = priorityName;
-    }
-}
-
 SettingsState.MODIFICATIONS = {
     "0-16-51": new Modification("Vanilla 0.16.51", "vanilla-0.16.51.json", true, [480, 512]),
     "0-16-51x": new Modification("Vanilla 0.16.51 - Expensive", "vanilla-0.16.51-expensive.json", true, [480, 512]),
@@ -52,80 +44,8 @@ SettingsState.MODIFICATIONS = {
     "bobs-0-16-51":
         new Modification("(EXPERIMENTAL) Bob's Mods + base 0.16.51", "bobs-0.16.51.json", true, [800, 832]),
 };
+
 SettingsState.DEFAULT_MODIFICATION = "0-16-51";
-// Ideally we'd write this as a generalized function, but for now we can hard-
-// code these version upgrades.
-SettingsState.modUpdates = {
-    "0-16-37": "0-16-51",
-    "0-16-37x": "0-16-51x",
-    "bobs-0-16-37": "bobs-0-16-51",
-};
-SettingsState.DEFAULT_COLOR_SCHEME = "default";
-SettingsState.colorScheme = null;
-SettingsState.seconds = one;
-SettingsState.minutes = RationalFromFloat(60);
-SettingsState.hours = RationalFromFloat(3600);
-SettingsState.displayRates = {
-    h: SettingsState.hours,
-    m: SettingsState.minutes,
-    s: SettingsState.seconds,
-};
-SettingsState.longRateNames = {
-    h: "hour",
-    m: "minute",
-    s: "second",
-};
-SettingsState.DEFAULT_RATE = "m";
-SettingsState.displayRateFactor = SettingsState.displayRates[SettingsState.DEFAULT_RATE];
-SettingsState.rateName = SettingsState.DEFAULT_RATE;
-SettingsState.DEFAULT_RATE_PRECISION = 3;
-SettingsState.ratePrecision = SettingsState.DEFAULT_RATE_PRECISION;
-SettingsState.DEFAULT_COUNT_PRECISION = 1;
-SettingsState.countPrecision = SettingsState.DEFAULT_COUNT_PRECISION;
-SettingsState.DEFAULT_MINIMUM = "1";
-SettingsState.minimumAssembler = SettingsState.DEFAULT_MINIMUM;
-SettingsState.DEFAULT_FURNACE = null;
-SettingsState.DEFAULT_FUEL = "coal";
-SettingsState.preferredFuel = null;
-SettingsState.OIL_OPTIONS = [
-    new Oil("advanced-oil-processing", "default"),
-    new Oil("basic-oil-processing", "basic"),
-    new Oil("coal-liquefaction", "coal"),
-];
-SettingsState.DEFAULT_OIL = "default";
-SettingsState.OIL_EXCLUSION = {
-    basic: { "advanced-oil-processing": true },
-    coal: { "advanced-oil-processing": true, "basic-oil-processing": true },
-    default: {},
-};
-SettingsState.oilGroup = SettingsState.DEFAULT_OIL;
-SettingsState.DEFAULT_KOVAREX = true;
-SettingsState.kovarexEnabled = false;
-SettingsState.DEFAULT_BELT = "transport-belt";
-SettingsState.preferredBelt = SettingsState.DEFAULT_BELT;
-SettingsState.preferredBeltSpeed = null;
-SettingsState.DEFAULT_PIPE = RationalFromFloat(17);
-SettingsState.minPipeLength = SettingsState.DEFAULT_PIPE;
-SettingsState.maxPipeThroughput = null;
-SettingsState.DEFAULT_MINING_PROD = "0";
-SettingsState.DEFAULT_VISUALIZER = "sankey";
-SettingsState.visualizer = SettingsState.DEFAULT_VISUALIZER;
-SettingsState.DEFAULT_DIRECTION = "right";
-SettingsState.visDirection = SettingsState.DEFAULT_DIRECTION;
-SettingsState.DEFAULT_NODE_BREADTH = 175;
-SettingsState.maxNodeHeight = SettingsState.DEFAULT_NODE_BREADTH;
-SettingsState.DEFAULT_LINK_LENGTH = 200;
-SettingsState.linkLength = SettingsState.DEFAULT_LINK_LENGTH;
-SettingsState.DEFAULT_FORMAT = "decimal";
-SettingsState.displayFormat = SettingsState.DEFAULT_FORMAT;
-SettingsState.displayFormats = {
-    d: "decimal",
-    r: "rational",
-};
-SettingsState.DEFAULT_TOOLTIP = true;
-SettingsState.tooltipsEnabled = SettingsState.DEFAULT_TOOLTIP;
-SettingsState.DEFAULT_DEBUG = false;
-SettingsState.showDebug = SettingsState.DEFAULT_DEBUG;
 
 function addOverrideOptions(version: string) {
     const tag = "local-" + version.replace(/\./g, "-");
@@ -134,6 +54,14 @@ function addOverrideOptions(version: string) {
         version + "-expensive.json");
     SettingsState.DEFAULT_MODIFICATION = tag;
 }
+
+// Ideally we'd write this as a generalized function, but for now we can hard-
+// code these version upgrades.
+SettingsState.modUpdates = {
+    "0-16-37": "0-16-51",
+    "0-16-37x": "0-16-51x",
+    "bobs-0-16-37": "bobs-0-16-51",
+};
 
 function normalizeDataSetName(modName: string) {
     const newName = SettingsState.modUpdates[modName];
@@ -163,6 +91,10 @@ function currentMod() {
     const elem = document.getElementById("data_set") as HTMLSelectElement;
     return elem.value;
 }
+
+// color scheme
+SettingsState.DEFAULT_COLOR_SCHEME = "default";
+SettingsState.colorScheme = null;
 
 function renderColorScheme(settings: IObjectMap<string>) {
     let color = SettingsState.DEFAULT_COLOR_SCHEME;
@@ -195,6 +127,24 @@ function setColorScheme(schemeName: string) {
     }
 }
 
+// display rate
+SettingsState.seconds = one;
+SettingsState.minutes = RationalFromFloat(60);
+SettingsState.hours = RationalFromFloat(3600);
+SettingsState.displayRates = {
+    h: SettingsState.hours,
+    m: SettingsState.minutes,
+    s: SettingsState.seconds,
+};
+SettingsState.longRateNames = {
+    h: "hour",
+    m: "minute",
+    s: "second",
+};
+SettingsState.DEFAULT_RATE = "m";
+SettingsState.displayRateFactor = SettingsState.displayRates[SettingsState.DEFAULT_RATE];
+SettingsState.rateName = SettingsState.DEFAULT_RATE;
+
 function renderRateOptions(settings: IObjectMap<string>) {
     SettingsState.rateName = SettingsState.DEFAULT_RATE;
     if ("rate" in settings) {
@@ -226,6 +176,12 @@ function renderRateOptions(settings: IObjectMap<string>) {
     cell.replaceChild(node, oldNode);
 }
 
+// precisions
+SettingsState.DEFAULT_RATE_PRECISION = 3;
+SettingsState.ratePrecision = SettingsState.DEFAULT_RATE_PRECISION;
+SettingsState.DEFAULT_COUNT_PRECISION = 1;
+SettingsState.countPrecision = SettingsState.DEFAULT_COUNT_PRECISION;
+
 function renderPrecisions(settings: IObjectMap<string>) {
     SettingsState.ratePrecision = SettingsState.DEFAULT_RATE_PRECISION;
     if ("rp" in settings) {
@@ -238,6 +194,10 @@ function renderPrecisions(settings: IObjectMap<string>) {
     }
     (document.getElementById("fprec") as HTMLInputElement).value = String(SettingsState.countPrecision);
 }
+
+// minimum assembler
+SettingsState.DEFAULT_MINIMUM = "1";
+SettingsState.minimumAssembler = SettingsState.DEFAULT_MINIMUM;
 
 function renderMinimumAssembler(settings: IObjectMap<string>) {
     let min = SettingsState.DEFAULT_MINIMUM;
@@ -271,6 +231,11 @@ function setMinimumAssembler(min: string) {
     SettingsState.minimumAssembler = min;
 }
 
+// furnace
+
+// Assigned during FactorySpec initialization.
+SettingsState.DEFAULT_FURNACE = null;
+
 function renderFurnace(settings: IObjectMap<string>) {
     let furnaceName = SettingsState.DEFAULT_FURNACE;
     if ("furnace" in settings) {
@@ -295,6 +260,10 @@ function renderFurnace(settings: IObjectMap<string>) {
     labels.append((d: any) => getImage(d, false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
+
+// fuel
+SettingsState.DEFAULT_FUEL = "coal";
+SettingsState.preferredFuel = null;
 
 function renderFuel(settings: IObjectMap<string>) {
     let fuelName = SettingsState.DEFAULT_FUEL;
@@ -331,6 +300,29 @@ function setPreferredFuel(name: string) {
     }
 }
 
+// oil
+class Oil {
+    public name: string;
+    public priority: string;
+    constructor(recipeName: string, priorityName: string) {
+        this.name = recipeName;
+        this.priority = priorityName;
+    }
+}
+
+SettingsState.OIL_OPTIONS = [
+    new Oil("advanced-oil-processing", "default"),
+    new Oil("basic-oil-processing", "basic"),
+    new Oil("coal-liquefaction", "coal"),
+];
+SettingsState.DEFAULT_OIL = "default";
+SettingsState.OIL_EXCLUSION = {
+    basic: { "advanced-oil-processing": true },
+    coal: { "advanced-oil-processing": true, "basic-oil-processing": true },
+    default: {},
+};
+SettingsState.oilGroup = SettingsState.DEFAULT_OIL;
+
 function renderOil(settings: IObjectMap<string>) {
     let oil = SettingsState.DEFAULT_OIL;
     // Named "p" for historical reasons.
@@ -360,6 +352,10 @@ function setOilRecipe(name: string) {
     solver.addDisabledRecipes(SettingsState.OIL_EXCLUSION[SettingsState.oilGroup]);
 }
 
+// kovarex
+SettingsState.DEFAULT_KOVAREX = true;
+SettingsState.kovarexEnabled = false;
+
 function renderKovarex(settings: IObjectMap<string>) {
     let k = SettingsState.DEFAULT_KOVAREX;
     if ("k" in settings) {
@@ -378,6 +374,11 @@ function setKovarex(enabled: boolean) {
         solver.addDisabledRecipes({ "kovarex-enrichment-process": true });
     }
 }
+
+// belt
+SettingsState.DEFAULT_BELT = "transport-belt";
+SettingsState.preferredBelt = SettingsState.DEFAULT_BELT;
+SettingsState.preferredBeltSpeed = null;
 
 function renderBelt(settings: IObjectMap<string>) {
     let pref = SettingsState.DEFAULT_BELT;
@@ -411,6 +412,11 @@ function setPreferredBelt(name: string) {
     }
 }
 
+// pipe
+SettingsState.DEFAULT_PIPE = RationalFromFloat(17);
+SettingsState.minPipeLength = SettingsState.DEFAULT_PIPE;
+SettingsState.maxPipeThroughput = null;
+
 function renderPipe(settings: IObjectMap<string>) {
     let pipe = SettingsState.DEFAULT_PIPE.toDecimal(0);
     if ("pipe" in settings) {
@@ -424,6 +430,9 @@ function setMinPipe(lengthString: string) {
     SettingsState.minPipeLength = RationalFromString(lengthString);
     SettingsState.maxPipeThroughput = pipeThroughput(SettingsState.minPipeLength);
 }
+
+// mining productivity bonus
+SettingsState.DEFAULT_MINING_PROD = "0";
 
 function renderMiningProd(settings: IObjectMap<string>) {
     let mprod = SettingsState.DEFAULT_MINING_PROD;
@@ -490,6 +499,10 @@ function renderDefaultBeacon(settings: IObjectMap<string>) {
     cell.replaceChild(node, oldDefMod);
 }
 
+// visualizer settings
+SettingsState.DEFAULT_VISUALIZER = "sankey";
+SettingsState.visualizer = SettingsState.DEFAULT_VISUALIZER;
+
 function renderVisualizerType(settings: IObjectMap<string>) {
     SettingsState.visualizer = SettingsState.DEFAULT_VISUALIZER;
     if ("vis" in settings) {
@@ -498,6 +511,9 @@ function renderVisualizerType(settings: IObjectMap<string>) {
     const input = document.getElementById("vis_" + SettingsState.visualizer) as HTMLInputElement;
     input.checked = true;
 }
+
+SettingsState.DEFAULT_DIRECTION = "right";
+SettingsState.visDirection = SettingsState.DEFAULT_DIRECTION;
 
 function renderVisualizerDirection(settings: IObjectMap<string>) {
     SettingsState.visDirection = SettingsState.DEFAULT_DIRECTION;
@@ -508,6 +524,9 @@ function renderVisualizerDirection(settings: IObjectMap<string>) {
     input.checked = true;
 }
 
+SettingsState.DEFAULT_NODE_BREADTH = 175;
+SettingsState.maxNodeHeight = SettingsState.DEFAULT_NODE_BREADTH;
+
 function renderNodeBreadth(settings: IObjectMap<string>) {
     SettingsState.maxNodeHeight = SettingsState.DEFAULT_NODE_BREADTH;
     if ("nh" in settings) {
@@ -516,6 +535,9 @@ function renderNodeBreadth(settings: IObjectMap<string>) {
     const input = document.getElementById("vis-node-breadth") as HTMLInputElement;
     input.value = String(SettingsState.maxNodeHeight);
 }
+
+SettingsState.DEFAULT_LINK_LENGTH = 200;
+SettingsState.linkLength = SettingsState.DEFAULT_LINK_LENGTH;
 
 function renderLinkLength(settings: IObjectMap<string>) {
     SettingsState.linkLength = SettingsState.DEFAULT_LINK_LENGTH;
@@ -526,6 +548,14 @@ function renderLinkLength(settings: IObjectMap<string>) {
     input.value = String(SettingsState.linkLength);
 }
 
+// value format
+SettingsState.DEFAULT_FORMAT = "decimal";
+SettingsState.displayFormat = SettingsState.DEFAULT_FORMAT;
+SettingsState.displayFormats = {
+    d: "decimal",
+    r: "rational",
+};
+
 function renderValueFormat(settings: IObjectMap<string>) {
     SettingsState.displayFormat = SettingsState.DEFAULT_FORMAT;
     if ("vf" in settings) {
@@ -535,6 +565,10 @@ function renderValueFormat(settings: IObjectMap<string>) {
     input.checked = true;
 }
 
+// tooltips
+SettingsState.DEFAULT_TOOLTIP = true;
+SettingsState.tooltipsEnabled = SettingsState.DEFAULT_TOOLTIP;
+
 function renderTooltip(settings: IObjectMap<string>) {
     SettingsState.tooltipsEnabled = SettingsState.DEFAULT_TOOLTIP;
     if ("t" in settings) {
@@ -543,6 +577,10 @@ function renderTooltip(settings: IObjectMap<string>) {
     const input = document.getElementById("tooltip") as HTMLInputElement;
     input.checked = SettingsState.tooltipsEnabled;
 }
+
+// debug tab
+SettingsState.DEFAULT_DEBUG = false;
+SettingsState.showDebug = SettingsState.DEFAULT_DEBUG;
 
 function renderShowDebug(settings: IObjectMap<string>) {
     SettingsState.showDebug = SettingsState.DEFAULT_DEBUG;
