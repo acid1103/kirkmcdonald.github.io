@@ -15,8 +15,8 @@ import {
     MiningRecipe,
     Recipe,
 } from "./recipe";
+import { State as SettingsState } from "./settings";
 import { IObjectMap } from "./utility-types";
-import { SettingsState } from "./window-interface";
 
 class FactoryDef implements IIconned {
     public name: string;

@@ -5,55 +5,81 @@ import { DEFAULT_TAB } from "./events";
 import { spec } from "./init";
 import { Rational, RationalFromFloat } from "./rational";
 import {
+    colorScheme,
     currentMod,
+    DEFAULT_BELT,
+    DEFAULT_COLOR_SCHEME,
+    DEFAULT_COUNT_PRECISION,
+    DEFAULT_DEBUG,
+    DEFAULT_DIRECTION,
+    DEFAULT_FORMAT,
+    DEFAULT_FUEL,
+    DEFAULT_KOVAREX,
+    DEFAULT_LINK_LENGTH,
+    DEFAULT_MINIMUM,
+    DEFAULT_MODIFICATION,
+    DEFAULT_NODE_BREADTH,
+    DEFAULT_OIL,
+    DEFAULT_PIPE,
+    DEFAULT_RATE,
+    DEFAULT_RATE_PRECISION,
+    DEFAULT_TOOLTIP,
+    DEFAULT_VISUALIZER,
+    kovarexEnabled,
+    minimumAssembler,
+    minPipeLength,
+    oilGroup,
+    preferredBelt,
+    preferredFuel,
+    State as SettingsState,
 } from "./settings";
 import { IObjectMap } from "./utility-types";
-import { SettingsState, EventsState, TargetState } from "./window-interface";
+import { EventsState, TargetState } from "./window-interface";
 
 function formatSettings(targets?: IObjectMap<Rational>) {
     let settings = "";
     if (EventsState.currentTab !== DEFAULT_TAB) {
         settings += "tab=" + EventsState.currentTab.slice(0, EventsState.currentTab.indexOf("_")) + "&";
     }
-    if (SettingsState.showDebug !== SettingsState.DEFAULT_DEBUG) {
+    if (SettingsState.showDebug !== DEFAULT_DEBUG) {
         settings += "debug=on&";
     }
     const mod = currentMod();
-    if (mod !== SettingsState.DEFAULT_MODIFICATION) {
+    if (mod !== DEFAULT_MODIFICATION) {
         settings += "data=" + mod + "&";
     }
-    if (SettingsState.colorScheme.name !== SettingsState.DEFAULT_COLOR_SCHEME) {
-        settings += "c=" + SettingsState.colorScheme.name + "&";
+    if (colorScheme.name !== DEFAULT_COLOR_SCHEME) {
+        settings += "c=" + colorScheme.name + "&";
     }
-    if (SettingsState.rateName !== SettingsState.DEFAULT_RATE) {
+    if (SettingsState.rateName !== DEFAULT_RATE) {
         settings += "rate=" + SettingsState.rateName + "&";
     }
-    if (SettingsState.ratePrecision !== SettingsState.DEFAULT_RATE_PRECISION) {
+    if (SettingsState.ratePrecision !== DEFAULT_RATE_PRECISION) {
         settings += "rp=" + SettingsState.ratePrecision + "&";
     }
-    if (SettingsState.countPrecision !== SettingsState.DEFAULT_COUNT_PRECISION) {
+    if (SettingsState.countPrecision !== DEFAULT_COUNT_PRECISION) {
         settings += "cp=" + SettingsState.countPrecision + "&";
     }
-    if (SettingsState.minimumAssembler !== SettingsState.DEFAULT_MINIMUM) {
-        settings += "min=" + SettingsState.minimumAssembler + "&";
+    if (minimumAssembler !== DEFAULT_MINIMUM) {
+        settings += "min=" + minimumAssembler + "&";
     }
     if (spec.furnace.name !== SettingsState.DEFAULT_FURNACE) {
         settings += "furnace=" + spec.furnace.name + "&";
     }
-    if (SettingsState.preferredFuel.name !== SettingsState.DEFAULT_FUEL) {
-        settings += "fuel=" + SettingsState.preferredFuel.name + "&";
+    if (preferredFuel.name !== DEFAULT_FUEL) {
+        settings += "fuel=" + preferredFuel.name + "&";
     }
-    if (SettingsState.oilGroup !== SettingsState.DEFAULT_OIL) {
-        settings += "p=" + SettingsState.oilGroup + "&";
+    if (oilGroup !== DEFAULT_OIL) {
+        settings += "p=" + oilGroup + "&";
     }
-    if (SettingsState.kovarexEnabled !== SettingsState.DEFAULT_KOVAREX) {
+    if (kovarexEnabled !== DEFAULT_KOVAREX) {
         settings += "k=off&";
     }
-    if (SettingsState.preferredBelt !== SettingsState.DEFAULT_BELT) {
-        settings += "belt=" + SettingsState.preferredBelt + "&";
+    if (preferredBelt !== DEFAULT_BELT) {
+        settings += "belt=" + preferredBelt + "&";
     }
-    if (!SettingsState.minPipeLength.equal(SettingsState.DEFAULT_PIPE)) {
-        settings += "pipe=" + SettingsState.minPipeLength.toDecimal(0) + "&";
+    if (!minPipeLength.equal(DEFAULT_PIPE)) {
+        settings += "pipe=" + minPipeLength.toDecimal(0) + "&";
     }
     if (!spec.miningProd.isZero()) {
         const hundred = RationalFromFloat(100);
@@ -69,22 +95,22 @@ function formatSettings(targets?: IObjectMap<Rational>) {
     if (!spec.defaultBeaconCount.isZero()) {
         settings += "dbc=" + spec.defaultBeaconCount.toDecimal(0) + "&";
     }
-    if (SettingsState.visualizer !== SettingsState.DEFAULT_VISUALIZER) {
+    if (SettingsState.visualizer !== DEFAULT_VISUALIZER) {
         settings += "vis=" + SettingsState.visualizer + "&";
     }
-    if (SettingsState.visDirection !== SettingsState.DEFAULT_DIRECTION) {
+    if (SettingsState.visDirection !== DEFAULT_DIRECTION) {
         settings += "vd=" + SettingsState.visDirection + "&";
     }
-    if (SettingsState.maxNodeHeight !== SettingsState.DEFAULT_NODE_BREADTH) {
+    if (SettingsState.maxNodeHeight !== DEFAULT_NODE_BREADTH) {
         settings += "nh=" + SettingsState.maxNodeHeight + "&";
     }
-    if (SettingsState.linkLength !== SettingsState.DEFAULT_LINK_LENGTH) {
+    if (SettingsState.linkLength !== DEFAULT_LINK_LENGTH) {
         settings += "ll=" + SettingsState.linkLength + "&";
     }
-    if (SettingsState.displayFormat !== SettingsState.DEFAULT_FORMAT) {
+    if (SettingsState.displayFormat !== DEFAULT_FORMAT) {
         settings += "vf=" + SettingsState.displayFormat[0] + "&";
     }
-    if (SettingsState.tooltipsEnabled !== SettingsState.DEFAULT_TOOLTIP) {
+    if (SettingsState.tooltipsEnabled !== DEFAULT_TOOLTIP) {
         settings += "t=off&";
     }
 

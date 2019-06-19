@@ -1,6 +1,6 @@
 import d3 = require("d3");
 import $ = require("jquery");
-import { colorSchemes } from "./color";
+import { ColorScheme, colorSchemes } from "./color";
 import { BeltIcon } from "./display";
 import { addInputs, makeDropdown } from "./dropdown";
 import {
@@ -13,13 +13,28 @@ import {
     changeOil,
     displayRateHandler,
 } from "./events";
+import { Fuel } from "./fuel";
 import { getImage } from "./icon";
 import { belts, fuel, shortModules, solver, spec, } from "./init";
 import { moduleDropdown } from "./module";
-import { one, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
+import { one, Rational, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
 import { pipeThroughput } from "./steps";
 import { IObjectMap } from "./utility-types";
-import { SettingsState } from "./window-interface";
+
+const State = {} as {
+    countPrecision: number;
+    DEFAULT_FURNACE: string;
+    displayFormat: string;
+    displayRateFactor: Rational;
+    linkLength: number;
+    maxNodeHeight: number;
+    rateName: string;
+    ratePrecision: number;
+    showDebug: boolean;
+    tooltipsEnabled: boolean;
+    visDirection: string;
+    visualizer: string;
+};
 
 // data set
 class Modification {
@@ -35,7 +50,7 @@ class Modification {
     }
 }
 
-SettingsState.MODIFICATIONS = {
+const MODIFICATIONS: IObjectMap<Modification> = {
     "0-16-51": new Modification("Vanilla 0.16.51", "vanilla-0.16.51.json", true, [480, 512]),
     "0-16-51x": new Modification("Vanilla 0.16.51 - Expensive", "vanilla-0.16.51-expensive.json", true, [480, 512]),
     "0-17-1": new Modification("Vanilla 0.17.1", "vanilla-0.17.1.json", false, [480, 512]),
@@ -45,26 +60,26 @@ SettingsState.MODIFICATIONS = {
         new Modification("(EXPERIMENTAL) Bob's Mods + base 0.16.51", "bobs-0.16.51.json", true, [800, 832]),
 };
 
-SettingsState.DEFAULT_MODIFICATION = "0-16-51";
+let DEFAULT_MODIFICATION = "0-16-51";
 
 function addOverrideOptions(version: string) {
     const tag = "local-" + version.replace(/\./g, "-");
-    SettingsState.MODIFICATIONS[tag] = new Modification("Local game data " + version, "local-" + version + ".json");
-    SettingsState.MODIFICATIONS[tag + "x"] = new Modification("Local game data " + version + " - Expensive", "local-" +
+    MODIFICATIONS[tag] = new Modification("Local game data " + version, "local-" + version + ".json");
+    MODIFICATIONS[tag + "x"] = new Modification("Local game data " + version + " - Expensive", "local-" +
         version + "-expensive.json");
-    SettingsState.DEFAULT_MODIFICATION = tag;
+    DEFAULT_MODIFICATION = tag;
 }
 
 // Ideally we'd write this as a generalized function, but for now we can hard-
 // code these version upgrades.
-SettingsState.modUpdates = {
+const modUpdates: IObjectMap<string> = {
     "0-16-37": "0-16-51",
     "0-16-37x": "0-16-51x",
     "bobs-0-16-37": "bobs-0-16-51",
 };
 
 function normalizeDataSetName(modName: string) {
-    const newName = SettingsState.modUpdates[modName];
+    const newName = modUpdates[modName];
     if (newName) {
         return newName;
     }
@@ -74,12 +89,12 @@ function normalizeDataSetName(modName: string) {
 function renderDataSetOptions(settings: IObjectMap<string>) {
     const modSelector = document.getElementById("data_set");
     const configuredMod = normalizeDataSetName(settings.data);
-    for (const modName in SettingsState.MODIFICATIONS) {
-        const mod = SettingsState.MODIFICATIONS[modName];
+    for (const modName in MODIFICATIONS) {
+        const mod = MODIFICATIONS[modName];
         const option = document.createElement("option");
         option.textContent = mod.name;
         option.value = modName;
-        if (configuredMod && configuredMod === modName || !configuredMod && modName === SettingsState.DEFAULT_MODIFICATION) {
+        if (configuredMod && configuredMod === modName || !configuredMod && modName === DEFAULT_MODIFICATION) {
             option.selected = true;
         }
         modSelector.appendChild(option);
@@ -93,11 +108,12 @@ function currentMod() {
 }
 
 // color scheme
-SettingsState.DEFAULT_COLOR_SCHEME = "default";
-SettingsState.colorScheme = null;
+const DEFAULT_COLOR_SCHEME = "default";
+
+let colorScheme: ColorScheme;
 
 function renderColorScheme(settings: IObjectMap<string>) {
-    let color = SettingsState.DEFAULT_COLOR_SCHEME;
+    let color = DEFAULT_COLOR_SCHEME;
     if ("c" in settings) {
         color = settings.c;
     }
@@ -120,56 +136,59 @@ function renderColorScheme(settings: IObjectMap<string>) {
 function setColorScheme(schemeName: string) {
     for (let i = 0; i < colorSchemes.length; i++) {
         if (colorSchemes[i].name === schemeName) {
-            SettingsState.colorScheme = colorSchemes[i];
-            SettingsState.colorScheme.apply();
+            colorScheme = colorSchemes[i];
+            colorScheme.apply();
             return;
         }
     }
 }
 
 // display rate
-SettingsState.seconds = one;
-SettingsState.minutes = RationalFromFloat(60);
-SettingsState.hours = RationalFromFloat(3600);
-SettingsState.displayRates = {
-    h: SettingsState.hours,
-    m: SettingsState.minutes,
-    s: SettingsState.seconds,
+const seconds = one;
+const minutes = RationalFromFloat(60);
+const hours = RationalFromFloat(3600);
+
+const displayRates: IObjectMap<Rational> = {
+    h: hours,
+    m: minutes,
+    s: seconds,
 };
-SettingsState.longRateNames = {
+const longRateNames: IObjectMap<string> = {
     h: "hour",
     m: "minute",
     s: "second",
 };
-SettingsState.DEFAULT_RATE = "m";
-SettingsState.displayRateFactor = SettingsState.displayRates[SettingsState.DEFAULT_RATE];
-SettingsState.rateName = SettingsState.DEFAULT_RATE;
+
+const DEFAULT_RATE = "m";
+
+State.displayRateFactor = displayRates[DEFAULT_RATE];
+State.rateName = DEFAULT_RATE;
 
 function renderRateOptions(settings: IObjectMap<string>) {
-    SettingsState.rateName = SettingsState.DEFAULT_RATE;
+    State.rateName = DEFAULT_RATE;
     if ("rate" in settings) {
-        SettingsState.rateName = settings.rate;
+        State.rateName = settings.rate;
     }
-    SettingsState.displayRateFactor = SettingsState.displayRates[SettingsState.rateName];
+    State.displayRateFactor = displayRates[State.rateName];
     const oldNode = document.getElementById("display_rate");
     const cell = oldNode.parentNode;
     const node = document.createElement("form");
     node.id = "display_rate";
-    for (const name in SettingsState.displayRates) {
-        const rate = SettingsState.displayRates[name];
+    for (const name in displayRates) {
+        const rate = displayRates[name];
         const input = document.createElement("input");
         input.id = name + "_rate";
         input.type = "radio";
         input.name = "rate";
         input.value = name;
-        if (rate.equal(SettingsState.displayRateFactor)) {
+        if (rate.equal(State.displayRateFactor)) {
             input.checked = true;
         }
         $(input).change(displayRateHandler);
         node.appendChild(input);
         const label = document.createElement("label");
         label.htmlFor = name + "_rate";
-        label.textContent = "items/" + SettingsState.longRateNames[name];
+        label.textContent = "items/" + longRateNames[name];
         node.appendChild(label);
         node.appendChild(document.createElement("br"));
     }
@@ -177,30 +196,32 @@ function renderRateOptions(settings: IObjectMap<string>) {
 }
 
 // precisions
-SettingsState.DEFAULT_RATE_PRECISION = 3;
-SettingsState.ratePrecision = SettingsState.DEFAULT_RATE_PRECISION;
-SettingsState.DEFAULT_COUNT_PRECISION = 1;
-SettingsState.countPrecision = SettingsState.DEFAULT_COUNT_PRECISION;
+const DEFAULT_RATE_PRECISION = 3;
+State.ratePrecision = DEFAULT_RATE_PRECISION;
+
+const DEFAULT_COUNT_PRECISION = 1;
+State.countPrecision = DEFAULT_COUNT_PRECISION;
 
 function renderPrecisions(settings: IObjectMap<string>) {
-    SettingsState.ratePrecision = SettingsState.DEFAULT_RATE_PRECISION;
+    State.ratePrecision = DEFAULT_RATE_PRECISION;
     if ("rp" in settings) {
-        SettingsState.ratePrecision = Number(settings.rp);
+        State.ratePrecision = Number(settings.rp);
     }
-    (document.getElementById("rprec") as HTMLInputElement).value = String(SettingsState.ratePrecision);
-    SettingsState.countPrecision = SettingsState.DEFAULT_COUNT_PRECISION;
+    (document.getElementById("rprec") as HTMLInputElement).value = String(State.ratePrecision);
+    State.countPrecision = DEFAULT_COUNT_PRECISION;
     if ("cp" in settings) {
-        SettingsState.countPrecision = Number(settings.cp);
+        State.countPrecision = Number(settings.cp);
     }
-    (document.getElementById("fprec") as HTMLInputElement).value = String(SettingsState.countPrecision);
+    (document.getElementById("fprec") as HTMLInputElement).value = String(State.countPrecision);
 }
 
 // minimum assembler
-SettingsState.DEFAULT_MINIMUM = "1";
-SettingsState.minimumAssembler = SettingsState.DEFAULT_MINIMUM;
+const DEFAULT_MINIMUM = "1";
+
+let minimumAssembler = DEFAULT_MINIMUM;
 
 function renderMinimumAssembler(settings: IObjectMap<string>) {
-    let min = SettingsState.DEFAULT_MINIMUM;
+    let min = DEFAULT_MINIMUM;
     // Backward compatibility.
     if ("use_3" in settings && settings.use_3 === "true") {
         min = "3";
@@ -228,16 +249,16 @@ function renderMinimumAssembler(settings: IObjectMap<string>) {
 
 function setMinimumAssembler(min: string) {
     spec.setMinimum(min);
-    SettingsState.minimumAssembler = min;
+    minimumAssembler = min;
 }
 
 // furnace
 
 // Assigned during FactorySpec initialization.
-SettingsState.DEFAULT_FURNACE = null;
+State.DEFAULT_FURNACE = null;
 
 function renderFurnace(settings: IObjectMap<string>) {
-    let furnaceName = SettingsState.DEFAULT_FURNACE;
+    let furnaceName = State.DEFAULT_FURNACE;
     if ("furnace" in settings) {
         furnaceName = settings.furnace;
     }
@@ -262,11 +283,12 @@ function renderFurnace(settings: IObjectMap<string>) {
 }
 
 // fuel
-SettingsState.DEFAULT_FUEL = "coal";
-SettingsState.preferredFuel = null;
+const DEFAULT_FUEL = "coal";
+
+let preferredFuel: Fuel;
 
 function renderFuel(settings: IObjectMap<string>) {
-    let fuelName = SettingsState.DEFAULT_FUEL;
+    let fuelName = DEFAULT_FUEL;
     if ("fuel" in settings) {
         fuelName = settings.fuel;
     }
@@ -295,7 +317,7 @@ function setPreferredFuel(name: string) {
     for (let i = 0; i < fuel.length; i++) {
         const f = fuel[i];
         if (f.name === name) {
-            SettingsState.preferredFuel = f;
+            preferredFuel = f;
         }
     }
 }
@@ -310,21 +332,24 @@ class Oil {
     }
 }
 
-SettingsState.OIL_OPTIONS = [
+const OIL_OPTIONS = [
     new Oil("advanced-oil-processing", "default"),
     new Oil("basic-oil-processing", "basic"),
     new Oil("coal-liquefaction", "coal"),
 ];
-SettingsState.DEFAULT_OIL = "default";
-SettingsState.OIL_EXCLUSION = {
+
+const DEFAULT_OIL = "default";
+
+const OIL_EXCLUSION: IObjectMap<IObjectMap<boolean>> = {
     basic: { "advanced-oil-processing": true },
     coal: { "advanced-oil-processing": true, "basic-oil-processing": true },
     default: {},
 };
-SettingsState.oilGroup = SettingsState.DEFAULT_OIL;
+
+let oilGroup = DEFAULT_OIL;
 
 function renderOil(settings: IObjectMap<string>) {
-    let oil = SettingsState.DEFAULT_OIL;
+    let oil = DEFAULT_OIL;
     // Named "p" for historical reasons.
     if ("p" in settings) {
         oil = settings.p;
@@ -335,7 +360,7 @@ function renderOil(settings: IObjectMap<string>) {
     const node = document.createElement("span");
     node.id = "oil";
     const dropdown = makeDropdown(d3.select(node));
-    const inputs = dropdown.selectAll("div").data(SettingsState.OIL_OPTIONS).join("div");
+    const inputs = dropdown.selectAll("div").data(OIL_OPTIONS).join("div");
     const labels = addInputs(
         inputs,
         "oil_dropdown",
@@ -347,17 +372,18 @@ function renderOil(settings: IObjectMap<string>) {
 }
 
 function setOilRecipe(name: string) {
-    solver.removeDisabledRecipes(SettingsState.OIL_EXCLUSION[SettingsState.oilGroup]);
-    SettingsState.oilGroup = name;
-    solver.addDisabledRecipes(SettingsState.OIL_EXCLUSION[SettingsState.oilGroup]);
+    solver.removeDisabledRecipes(OIL_EXCLUSION[oilGroup]);
+    oilGroup = name;
+    solver.addDisabledRecipes(OIL_EXCLUSION[oilGroup]);
 }
 
 // kovarex
-SettingsState.DEFAULT_KOVAREX = true;
-SettingsState.kovarexEnabled = false;
+const DEFAULT_KOVAREX = true;
+
+let kovarexEnabled: boolean;
 
 function renderKovarex(settings: IObjectMap<string>) {
-    let k = SettingsState.DEFAULT_KOVAREX;
+    let k = DEFAULT_KOVAREX;
     if ("k" in settings) {
         k = settings.k !== "off";
     }
@@ -367,7 +393,7 @@ function renderKovarex(settings: IObjectMap<string>) {
 }
 
 function setKovarex(enabled: boolean) {
-    SettingsState.kovarexEnabled = enabled;
+    kovarexEnabled = enabled;
     if (enabled) {
         solver.removeDisabledRecipes({ "kovarex-enrichment-process": true });
     } else {
@@ -376,12 +402,13 @@ function setKovarex(enabled: boolean) {
 }
 
 // belt
-SettingsState.DEFAULT_BELT = "transport-belt";
-SettingsState.preferredBelt = SettingsState.DEFAULT_BELT;
-SettingsState.preferredBeltSpeed = null;
+const DEFAULT_BELT = "transport-belt";
+
+let preferredBelt = DEFAULT_BELT;
+let preferredBeltSpeed: Rational = null;
 
 function renderBelt(settings: IObjectMap<string>) {
-    let pref = SettingsState.DEFAULT_BELT;
+    let pref = DEFAULT_BELT;
     if ("belt" in settings) {
         pref = settings.belt;
     }
@@ -395,7 +422,7 @@ function renderBelt(settings: IObjectMap<string>) {
     const labels = addInputs(
         inputs,
         "belt_dropdown",
-        (d) => d.name === SettingsState.preferredBelt,
+        (d) => d.name === preferredBelt,
         changeBelt,
     );
     labels.append((d: any) => getImage(new BeltIcon(solver.items[d.name], d.speed), false, dropdown.node()));
@@ -406,36 +433,37 @@ function setPreferredBelt(name: string) {
     for (let i = 0; i < belts.length; i++) {
         const belt = belts[i];
         if (belt.name === name) {
-            SettingsState.preferredBelt = name;
-            SettingsState.preferredBeltSpeed = belt.speed;
+            preferredBelt = name;
+            preferredBeltSpeed = belt.speed;
         }
     }
 }
 
 // pipe
-SettingsState.DEFAULT_PIPE = RationalFromFloat(17);
-SettingsState.minPipeLength = SettingsState.DEFAULT_PIPE;
-SettingsState.maxPipeThroughput = null;
+const DEFAULT_PIPE = RationalFromFloat(17);
+
+let minPipeLength = DEFAULT_PIPE;
+let maxPipeThroughput: Rational = null;
 
 function renderPipe(settings: IObjectMap<string>) {
-    let pipe = SettingsState.DEFAULT_PIPE.toDecimal(0);
+    let pipe = DEFAULT_PIPE.toDecimal(0);
     if ("pipe" in settings) {
         pipe = settings.pipe;
     }
     setMinPipe(pipe);
-    (document.getElementById("pipe_length") as HTMLInputElement).value = SettingsState.minPipeLength.toDecimal(0);
+    (document.getElementById("pipe_length") as HTMLInputElement).value = minPipeLength.toDecimal(0);
 }
 
 function setMinPipe(lengthString: string) {
-    SettingsState.minPipeLength = RationalFromString(lengthString);
-    SettingsState.maxPipeThroughput = pipeThroughput(SettingsState.minPipeLength);
+    minPipeLength = RationalFromString(lengthString);
+    maxPipeThroughput = pipeThroughput(minPipeLength);
 }
 
 // mining productivity bonus
-SettingsState.DEFAULT_MINING_PROD = "0";
+const DEFAULT_MINING_PROD = "0";
 
 function renderMiningProd(settings: IObjectMap<string>) {
-    let mprod = SettingsState.DEFAULT_MINING_PROD;
+    let mprod = DEFAULT_MINING_PROD;
     if ("mprod" in settings) {
         mprod = settings.mprod;
     }
@@ -500,95 +528,103 @@ function renderDefaultBeacon(settings: IObjectMap<string>) {
 }
 
 // visualizer settings
-SettingsState.DEFAULT_VISUALIZER = "sankey";
-SettingsState.visualizer = SettingsState.DEFAULT_VISUALIZER;
+const DEFAULT_VISUALIZER = "sankey";
+
+State.visualizer = DEFAULT_VISUALIZER;
 
 function renderVisualizerType(settings: IObjectMap<string>) {
-    SettingsState.visualizer = SettingsState.DEFAULT_VISUALIZER;
+    State.visualizer = DEFAULT_VISUALIZER;
     if ("vis" in settings) {
-        SettingsState.visualizer = settings.vis;
+        State.visualizer = settings.vis;
     }
-    const input = document.getElementById("vis_" + SettingsState.visualizer) as HTMLInputElement;
+    const input = document.getElementById("vis_" + State.visualizer) as HTMLInputElement;
     input.checked = true;
 }
 
-SettingsState.DEFAULT_DIRECTION = "right";
-SettingsState.visDirection = SettingsState.DEFAULT_DIRECTION;
+const DEFAULT_DIRECTION = "right";
+
+State.visDirection = DEFAULT_DIRECTION;
 
 function renderVisualizerDirection(settings: IObjectMap<string>) {
-    SettingsState.visDirection = SettingsState.DEFAULT_DIRECTION;
+    State.visDirection = DEFAULT_DIRECTION;
     if ("vd" in settings) {
-        SettingsState.visDirection = settings.vd;
+        State.visDirection = settings.vd;
     }
-    const input = document.getElementById("visdir_" + SettingsState.visDirection) as HTMLInputElement;
+    const input = document.getElementById("visdir_" + State.visDirection) as HTMLInputElement;
     input.checked = true;
 }
 
-SettingsState.DEFAULT_NODE_BREADTH = 175;
-SettingsState.maxNodeHeight = SettingsState.DEFAULT_NODE_BREADTH;
+const DEFAULT_NODE_BREADTH = 175;
+
+State.maxNodeHeight = DEFAULT_NODE_BREADTH;
 
 function renderNodeBreadth(settings: IObjectMap<string>) {
-    SettingsState.maxNodeHeight = SettingsState.DEFAULT_NODE_BREADTH;
+    State.maxNodeHeight = DEFAULT_NODE_BREADTH;
     if ("nh" in settings) {
-        SettingsState.maxNodeHeight = Number(settings.nh);
+        State.maxNodeHeight = Number(settings.nh);
     }
     const input = document.getElementById("vis-node-breadth") as HTMLInputElement;
-    input.value = String(SettingsState.maxNodeHeight);
+    input.value = String(State.maxNodeHeight);
 }
 
-SettingsState.DEFAULT_LINK_LENGTH = 200;
-SettingsState.linkLength = SettingsState.DEFAULT_LINK_LENGTH;
+const DEFAULT_LINK_LENGTH = 200;
+
+State.linkLength = DEFAULT_LINK_LENGTH;
 
 function renderLinkLength(settings: IObjectMap<string>) {
-    SettingsState.linkLength = SettingsState.DEFAULT_LINK_LENGTH;
+    State.linkLength = DEFAULT_LINK_LENGTH;
     if ("ll" in settings) {
-        SettingsState.linkLength = Number(settings.ll);
+        State.linkLength = Number(settings.ll);
     }
     const input = document.getElementById("vis-link-length") as HTMLInputElement;
-    input.value = String(SettingsState.linkLength);
+    input.value = String(State.linkLength);
 }
 
 // value format
-SettingsState.DEFAULT_FORMAT = "decimal";
-SettingsState.displayFormat = SettingsState.DEFAULT_FORMAT;
-SettingsState.displayFormats = {
+const DEFAULT_FORMAT = "decimal";
+
+State.displayFormat = DEFAULT_FORMAT;
+
+const displayFormats: IObjectMap<string> = {
     d: "decimal",
     r: "rational",
 };
 
 function renderValueFormat(settings: IObjectMap<string>) {
-    SettingsState.displayFormat = SettingsState.DEFAULT_FORMAT;
+    State.displayFormat = DEFAULT_FORMAT;
     if ("vf" in settings) {
-        SettingsState.displayFormat = SettingsState.displayFormats[settings.vf];
+        State.displayFormat = displayFormats[settings.vf];
     }
-    const input = document.getElementById(SettingsState.displayFormat + "_format") as HTMLInputElement;
+    const input = document.getElementById(State.displayFormat + "_format") as HTMLInputElement;
     input.checked = true;
 }
 
 // tooltips
-SettingsState.DEFAULT_TOOLTIP = true;
-SettingsState.tooltipsEnabled = SettingsState.DEFAULT_TOOLTIP;
+const DEFAULT_TOOLTIP = true;
+
+State.tooltipsEnabled = DEFAULT_TOOLTIP;
 
 function renderTooltip(settings: IObjectMap<string>) {
-    SettingsState.tooltipsEnabled = SettingsState.DEFAULT_TOOLTIP;
+    State.tooltipsEnabled = DEFAULT_TOOLTIP;
     if ("t" in settings) {
-        SettingsState.tooltipsEnabled = settings.t !== "off";
+        State.tooltipsEnabled = settings.t !== "off";
     }
     const input = document.getElementById("tooltip") as HTMLInputElement;
-    input.checked = SettingsState.tooltipsEnabled;
+    input.checked = State.tooltipsEnabled;
 }
 
 // debug tab
-SettingsState.DEFAULT_DEBUG = false;
-SettingsState.showDebug = SettingsState.DEFAULT_DEBUG;
+const DEFAULT_DEBUG = false;
+
+State.showDebug = DEFAULT_DEBUG;
 
 function renderShowDebug(settings: IObjectMap<string>) {
-    SettingsState.showDebug = SettingsState.DEFAULT_DEBUG;
+    State.showDebug = DEFAULT_DEBUG;
     if ("debug" in settings) {
-        SettingsState.showDebug = settings.debug === "on";
+        State.showDebug = settings.debug === "on";
     }
     const debug = document.getElementById("render_debug") as HTMLInputElement;
-    debug.checked = SettingsState.showDebug;
+    debug.checked = State.showDebug;
 }
 
 // all
@@ -615,18 +651,48 @@ function renderSettings(settings: IObjectMap<string>) {
 }
 
 export {
-    Modification,
-    Oil,
+    State,
+    MODIFICATIONS,
+    DEFAULT_MODIFICATION,
     addOverrideOptions,
     renderDataSetOptions,
     currentMod,
+    DEFAULT_COLOR_SCHEME,
+    colorScheme,
     setColorScheme,
+    displayRates,
+    longRateNames,
+    DEFAULT_RATE,
+    DEFAULT_RATE_PRECISION,
+    DEFAULT_COUNT_PRECISION,
+    DEFAULT_MINIMUM,
+    minimumAssembler,
     setMinimumAssembler,
+    DEFAULT_FUEL,
+    preferredFuel,
     setPreferredFuel,
+    Oil,
+    DEFAULT_OIL,
+    oilGroup,
     setOilRecipe,
+    DEFAULT_KOVAREX,
+    kovarexEnabled,
     setKovarex,
+    DEFAULT_BELT,
+    preferredBelt,
+    preferredBeltSpeed,
     setPreferredBelt,
+    DEFAULT_PIPE,
+    minPipeLength,
+    maxPipeThroughput,
     setMinPipe,
     getMprod,
+    DEFAULT_VISUALIZER,
+    DEFAULT_DIRECTION,
+    DEFAULT_NODE_BREADTH,
+    DEFAULT_LINK_LENGTH,
+    DEFAULT_FORMAT,
+    DEFAULT_TOOLTIP,
+    DEFAULT_DEBUG,
     renderSettings,
 };

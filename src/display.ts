@@ -17,12 +17,19 @@ import { Item } from "./item";
 import { Module, moduleDropdown } from "./module";
 import { one, Rational, RationalFromFloat, zero } from "./rational";
 import { Recipe } from "./recipe";
+import {
+    maxPipeThroughput,
+    preferredBelt,
+    preferredBeltSpeed,
+    preferredFuel,
+    State as SettingsState,
+} from "./settings";
 import { sorted } from "./sort";
 import { pipeLength } from "./steps";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
 import { renderGraph } from "./visualize";
-import { DisplayState, EventsState, SettingsState, TargetState } from "./window-interface";
+import { DisplayState, EventsState, TargetState } from "./window-interface";
 
 function formatName(name: string) {
     name = name.replace(new RegExp("-", "g"), " ");
@@ -139,7 +146,7 @@ function Header(name: string, colSpan?: number) {
 const NO_MODULE = "no module";
 
 function pipeValues(rate: Rational) {
-    const pipes = rate.div(SettingsState.maxPipeThroughput).ceil();
+    const pipes = rate.div(maxPipeThroughput).ceil();
     const perPipeRate = rate.div(pipes);
     const length = pipeLength(perPipeRate).floor();
     return { pipes, length };
@@ -183,10 +190,10 @@ class BeltIcon implements IIconned {
     public icon_row: number;
     constructor(beltItem?: Item, beltSpeed?: Rational) {
         if (!beltItem) {
-            beltItem = solver.items[SettingsState.preferredBelt];
+            beltItem = solver.items[preferredBelt];
         }
         if (!beltSpeed) {
-            beltSpeed = SettingsState.preferredBeltSpeed;
+            beltSpeed = preferredBeltSpeed;
         }
         this.item = beltItem;
         this.speed = beltSpeed;
@@ -320,7 +327,7 @@ class ItemRow implements IRow {
         const beltImage = getImage(new BeltIcon());
         this.beltCell.appendChild(beltImage);
         this.beltCell.appendChild(new Text(" \u00d7"));
-        const beltCount = itemRate.div(SettingsState.preferredBeltSpeed);
+        const beltCount = itemRate.div(preferredBeltSpeed);
         this.beltCountNode.textContent = alignCount(beltCount);
     }
 
@@ -605,10 +612,10 @@ class FactoryRow implements IRow {
         if (power.fuel === "electric") {
             this.powerNode.textContent = alignPower(power.power);
         } else if (power.fuel === "chemical") {
-            const fuelImage = getImage(SettingsState.preferredFuel);
+            const fuelImage = getImage(preferredFuel);
             this.fuelCell.appendChild(fuelImage);
             this.fuelCell.appendChild(new Text(" \u00d7"));
-            this.powerNode.textContent = alignRate(power.power.div(SettingsState.preferredFuel.value)) + "/" + SettingsState.rateName;
+            this.powerNode.textContent = alignRate(power.power.div(preferredFuel.value)) + "/" + SettingsState.rateName;
         }
     }
 

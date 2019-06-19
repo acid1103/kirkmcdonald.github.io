@@ -14,7 +14,8 @@ import {
 import { getImage } from "./icon";
 import { itemGroups, solver, spec } from "./init";
 import { one, Rational, RationalFromString, zero } from "./rational";
-import { TargetState, SettingsState } from "./window-interface";
+import { longRateNames, State as SettingsState } from "./settings";
+import { TargetState } from "./window-interface";
 
 const DEFAULT_ITEM = "advanced-circuit";
 
@@ -152,7 +153,7 @@ class BuildTarget {
     }
 
     public setRateLabel() {
-        this.rateLabel.textContent = " Items/" + SettingsState.longRateNames[SettingsState.rateName] + ": ";
+        this.rateLabel.textContent = " Items/" + longRateNames[SettingsState.rateName] + ": ";
     }
 
     public displayRecipes() {

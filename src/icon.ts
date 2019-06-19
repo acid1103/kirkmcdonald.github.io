@@ -1,7 +1,8 @@
 import { Data } from "./data";
-import { IconState, SettingsState } from "./window-interface";
+import { State as SettingsState } from "./settings";
 import { Tooltip } from "./tooltip";
 import { IObjectMap } from "./utility-types";
+import { IconState } from "./window-interface";
 
 interface IIconned {
     name: string;

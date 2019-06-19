@@ -35,12 +35,19 @@ import { Item } from "./item";
 import { getModules, Module } from "./module";
 import { RationalFromFloat } from "./rational";
 import { getRecipeGraph } from "./recipe";
-import { addOverrideOptions, currentMod, renderDataSetOptions, renderSettings } from "./settings";
+import {
+    addOverrideOptions,
+    currentMod,
+    DEFAULT_MODIFICATION,
+    MODIFICATIONS,
+    renderDataSetOptions,
+    renderSettings,
+} from "./settings";
 import { Solver } from "./solve";
 import { sorted } from "./sort";
 import { addTarget } from "./target";
 import { IObjectMap } from "./utility-types";
-import { EventsState, SettingsState, TargetState } from "./window-interface";
+import { EventsState, TargetState } from "./window-interface";
 
 (window as any).d3 = d3;
 
@@ -104,9 +111,9 @@ function reset() {
 
 function loadDataRunner(modName: string, callback: (data: Data) => void) {
     const xobj = new XMLHttpRequest();
-    let mod = SettingsState.MODIFICATIONS[modName];
+    let mod = MODIFICATIONS[modName];
     if (!mod) {
-        mod = SettingsState.MODIFICATIONS[SettingsState.DEFAULT_MODIFICATION];
+        mod = MODIFICATIONS[DEFAULT_MODIFICATION];
     }
     spriteSheetSize = mod.sheetSize;
     useLegacyCalculations = mod.legacy;

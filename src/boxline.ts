@@ -2,9 +2,10 @@ import d3 = require("d3");
 import dagre = require("dagre");
 import { displayRate, formatName } from "./display";
 import { GraphClickHandler, GraphMouseLeaveHandler, GraphMouseOverHandler } from "./events";
+import { State as SettingsState } from "./settings";
 import { IObjectMap } from "./utility-types";
 import { colorList, getColorMaps, GraphEdge, GraphNode, iconSize, imageViewBox, renderNode } from "./visualize";
-import { IconState, SettingsState } from "./window-interface";
+import { IconState } from "./window-interface";
 
 function edgePath(edge: BoxLineGraphEdge) {
     const start = edge.points[0];

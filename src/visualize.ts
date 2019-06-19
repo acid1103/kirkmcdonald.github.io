@@ -10,9 +10,10 @@ import { solver, spec, spriteSheetSize } from "./init";
 import { Item } from "./item";
 import { one, Rational, zero } from "./rational";
 import { Ingredient, Recipe } from "./recipe";
+import { preferredBeltSpeed, State as SettingsState } from "./settings";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
-import { IconState, SettingsState, TargetState } from "./window-interface";
+import { IconState, TargetState } from "./window-interface";
 
 const colorList = [
     "#1f77b4", // blue
@@ -132,7 +133,7 @@ function makeGraph(totals: Totals, ignore: IObjectMap<boolean>) {
                     }
                     let beltCount = null;
                     if (ing.item.phase === "solid") {
-                        beltCount = subRate.div(SettingsState.preferredBeltSpeed);
+                        beltCount = subRate.div(preferredBeltSpeed);
                     }
                     const extra = subRecipe.products.length > 1;
                     links.push(new GraphEdge(

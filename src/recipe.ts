@@ -10,8 +10,8 @@ import {
     RationalFromFloats,
     zero,
 } from "./rational";
+import { preferredFuel } from "./settings";
 import { IObjectMap } from "./utility-types";
-import { SettingsState } from "./window-interface";
 
 class Ingredient {
     public amount: Rational;
@@ -98,8 +98,8 @@ class Recipe implements IIconned {
         const basePower = factory.powerUsage(spec, one).power;
         const baseRate = factory.recipeRate(spec, this);
         const perItemEnergy = basePower.div(baseRate);
-        const fuelAmount = perItemEnergy.div(SettingsState.preferredFuel.value);
-        return [new Ingredient(fuelAmount, SettingsState.preferredFuel.item)];
+        const fuelAmount = perItemEnergy.div(preferredFuel.value);
+        return [new Ingredient(fuelAmount, preferredFuel.item)];
     }
 
     public getIngredients(spec: FactorySpec) {

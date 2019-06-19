@@ -18,6 +18,7 @@ import { Module } from "./module";
 import { RationalFromString } from "./rational";
 import {
     currentMod,
+    displayRates,
     getMprod,
     Oil,
     setColorScheme,
@@ -27,12 +28,13 @@ import {
     setOilRecipe,
     setPreferredBelt,
     setPreferredFuel,
+    State as SettingsState,
 } from "./settings";
 import { PipeConfig } from "./steps";
 import { addTarget, BuildTarget, isFactoryTarget } from "./target";
 import { IObjectMap } from "./utility-types";
-import { renderGraph } from "./visualize";
-import { DisplayState, SettingsState, EventsState, TargetState, GraphNode } from "./window-interface";
+import { GraphNode, renderGraph } from "./visualize";
+import { DisplayState, EventsState, TargetState } from "./window-interface";
 
 // build target events
 
@@ -170,7 +172,7 @@ function changeColor(event: JQuery.ChangeEvent<any, any, any, HTMLSelectElement>
 // Triggered when the display rate is changed.
 function displayRateHandler(event: JQuery.ChangeEvent<HTMLInputElement, null, HTMLInputElement, HTMLInputElement>) {
     const value = event.target.value;
-    SettingsState.displayRateFactor = SettingsState.displayRates[value];
+    SettingsState.displayRateFactor = displayRates[value];
     SettingsState.rateName = value;
     display();
 }
