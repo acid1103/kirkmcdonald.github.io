@@ -1,15 +1,25 @@
 import d3 = require("d3");
 import $ = require("jquery");
 import { colorSchemes } from "./color";
+import { BeltIcon } from "./display";
 import { addInputs, makeDropdown } from "./dropdown";
+import {
+    changeBelt,
+    changeDefaultBeacon,
+    changeDefaultModule,
+    changeFuel,
+    changeFurnace,
+    changeMin,
+    changeOil,
+    displayRateHandler,
+} from "./events";
 import { getImage } from "./icon";
+import { belts, fuel, shortModules, solver, spec, } from "./init";
 import { moduleDropdown } from "./module";
 import { one, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
-import { IObjectMap } from "./utility-types";
-import { InitState, SettingsState, window as TEMP_WINDOW_STORAGE } from "./window-interface";
-import { displayRateHandler, changeMin, changeFurnace, changeFuel, changeOil, changeBelt, changeDefaultModule, changeDefaultBeacon } from "./events";
-import { BeltIcon } from "./display";
 import { pipeThroughput } from "./steps";
+import { IObjectMap } from "./utility-types";
+import { SettingsState } from "./window-interface";
 
 class Modification {
     public name: string;
@@ -235,7 +245,7 @@ function renderMinimumAssembler(settings: IObjectMap<string>) {
     if ("use_3" in settings && settings.use_3 === "true") {
         min = "3";
     }
-    const assemblers = InitState.spec.factories.crafting;
+    const assemblers = spec.factories.crafting;
     if ("min" in settings && Number(min) >= 1 && Number(min) <= assemblers.length) {
         min = settings.min;
     }
@@ -257,7 +267,7 @@ function renderMinimumAssembler(settings: IObjectMap<string>) {
 }
 
 function setMinimumAssembler(min: string) {
-    InitState.spec.setMinimum(min);
+    spec.setMinimum(min);
     SettingsState.minimumAssembler = min;
 }
 
@@ -266,14 +276,14 @@ function renderFurnace(settings: IObjectMap<string>) {
     if ("furnace" in settings) {
         furnaceName = settings.furnace;
     }
-    if (furnaceName !== InitState.spec.furnace.name) {
-        InitState.spec.setFurnace(furnaceName);
+    if (furnaceName !== spec.furnace.name) {
+        spec.setFurnace(furnaceName);
     }
     const oldNode = document.getElementById("furnace");
     const cell = oldNode.parentNode;
     const node = document.createElement("span");
     node.id = "furnace";
-    const furnaces = InitState.spec.factories.smelting;
+    const furnaces = spec.factories.smelting;
     const dropdown = makeDropdown(d3.select(node));
     const inputs = dropdown.selectAll("div").data(furnaces).join("div");
     const labels = addInputs(
@@ -297,7 +307,7 @@ function renderFuel(settings: IObjectMap<string>) {
     const node = document.createElement("span");
     node.id = "fuel";
     const dropdown = makeDropdown(d3.select(node));
-    const inputs = dropdown.selectAll("div").data(InitState.fuel).join("div");
+    const inputs = dropdown.selectAll("div").data(fuel).join("div");
     const labels = addInputs(
         inputs,
         "fuel_dropdown",
@@ -313,8 +323,8 @@ function renderFuel(settings: IObjectMap<string>) {
 }
 
 function setPreferredFuel(name: string) {
-    for (let i = 0; i < InitState.fuel.length; i++) {
-        const f = InitState.fuel[i];
+    for (let i = 0; i < fuel.length; i++) {
+        const f = fuel[i];
         if (f.name === name) {
             SettingsState.preferredFuel = f;
         }
@@ -340,14 +350,14 @@ function renderOil(settings: IObjectMap<string>) {
         (d) => d.priority === oil,
         changeOil,
     );
-    labels.append((d: any) => getImage(InitState.solver.recipes[d.name], false, dropdown.node()));
+    labels.append((d: any) => getImage(solver.recipes[d.name], false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
 
 function setOilRecipe(name: string) {
-    InitState.solver.removeDisabledRecipes(SettingsState.OIL_EXCLUSION[SettingsState.oilGroup]);
+    solver.removeDisabledRecipes(SettingsState.OIL_EXCLUSION[SettingsState.oilGroup]);
     SettingsState.oilGroup = name;
-    InitState.solver.addDisabledRecipes(SettingsState.OIL_EXCLUSION[SettingsState.oilGroup]);
+    solver.addDisabledRecipes(SettingsState.OIL_EXCLUSION[SettingsState.oilGroup]);
 }
 
 function renderKovarex(settings: IObjectMap<string>) {
@@ -363,9 +373,9 @@ function renderKovarex(settings: IObjectMap<string>) {
 function setKovarex(enabled: boolean) {
     SettingsState.kovarexEnabled = enabled;
     if (enabled) {
-        InitState.solver.removeDisabledRecipes({ "kovarex-enrichment-process": true });
+        solver.removeDisabledRecipes({ "kovarex-enrichment-process": true });
     } else {
-        InitState.solver.addDisabledRecipes({ "kovarex-enrichment-process": true });
+        solver.addDisabledRecipes({ "kovarex-enrichment-process": true });
     }
 }
 
@@ -380,20 +390,20 @@ function renderBelt(settings: IObjectMap<string>) {
     const node = document.createElement("span");
     node.id = "belt";
     const dropdown = makeDropdown(d3.select(node));
-    const inputs = dropdown.selectAll("div").data(InitState.belts).join("div");
+    const inputs = dropdown.selectAll("div").data(belts).join("div");
     const labels = addInputs(
         inputs,
         "belt_dropdown",
         (d) => d.name === SettingsState.preferredBelt,
         changeBelt,
     );
-    labels.append((d: any) => getImage(new BeltIcon(InitState.solver.items[d.name], d.speed), false, dropdown.node()));
+    labels.append((d: any) => getImage(new BeltIcon(solver.items[d.name], d.speed), false, dropdown.node()));
     cell.replaceChild(node, oldNode);
 }
 
 function setPreferredBelt(name: string) {
-    for (let i = 0; i < InitState.belts.length; i++) {
-        const belt = InitState.belts[i];
+    for (let i = 0; i < belts.length; i++) {
+        const belt = belts[i];
         if (belt.name === name) {
             SettingsState.preferredBelt = name;
             SettingsState.preferredBeltSpeed = belt.speed;
@@ -422,7 +432,7 @@ function renderMiningProd(settings: IObjectMap<string>) {
     }
     const mprodInput = document.getElementById("mprod") as HTMLInputElement;
     mprodInput.value = mprod;
-    InitState.spec.miningProd = getMprod();
+    spec.miningProd = getMprod();
 }
 
 function getMprod() {
@@ -434,9 +444,9 @@ function getMprod() {
 function renderDefaultModule(settings: IObjectMap<string>) {
     let defaultModule: any = null;
     if ("dm" in settings) {
-        defaultModule = InitState.shortModules[settings.dm];
+        defaultModule = shortModules[settings.dm];
     }
-    InitState.spec.setDefaultModule(defaultModule);
+    spec.setDefaultModule(defaultModule);
 
     const oldDefMod = document.getElementById("default_module");
     const cell = oldDefMod.parentNode;
@@ -456,12 +466,12 @@ function renderDefaultBeacon(settings: IObjectMap<string>) {
     let defaultBeacon: any = null;
     let defaultCount = zero;
     if ("db" in settings) {
-        defaultBeacon = InitState.shortModules[settings.db];
+        defaultBeacon = shortModules[settings.db];
     }
     if ("dbc" in settings) {
         defaultCount = RationalFromString(settings.dbc);
     }
-    InitState.spec.setDefaultBeacon(defaultBeacon, defaultCount);
+    spec.setDefaultBeacon(defaultBeacon, defaultCount);
 
     const dbcField = document.getElementById("default_beacon_count") as HTMLInputElement;
     dbcField.value = defaultCount.toDecimal(0);

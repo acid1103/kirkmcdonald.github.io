@@ -1,6 +1,7 @@
 import { Data, IAssemblingMachine, IChemicalEnergySource } from "./data";
 import { alignPower, formatName } from "./display";
 import { getImage, IIconned } from "./icon";
+import { solver, useLegacyCalculations } from "./init";
 import { Module } from "./module";
 import {
     half,
@@ -15,7 +16,7 @@ import {
     Recipe,
 } from "./recipe";
 import { IObjectMap } from "./utility-types";
-import { InitState, SettingsState } from "./window-interface";
+import { SettingsState } from "./window-interface";
 
 class FactoryDef implements IIconned {
     public name: string;
@@ -118,7 +119,7 @@ class MinerDef extends FactoryDef {
     }
 
     public less(other: MinerDef) {
-        if (InitState.useLegacyCalculations && !this.mining_power.equal(other.mining_power)) {
+        if (useLegacyCalculations && !this.mining_power.equal(other.mining_power)) {
             return this.mining_power.less(other.mining_power);
         }
         return this.mining_speed.less(other.mining_speed);
@@ -141,7 +142,7 @@ class MinerDef extends FactoryDef {
         t.appendChild(b);
         t.appendChild(new Text(alignPower(this.energyUsage, 0)));
         t.appendChild(document.createElement("br"));
-        if (InitState.useLegacyCalculations) {
+        if (useLegacyCalculations) {
             b = document.createElement("b");
             b.textContent = "Mining power: ";
             t.appendChild(b);
@@ -343,7 +344,7 @@ class Miner extends Factory {
     public recipeRate(spec: FactorySpec, recipe: MiningRecipe) {
         const miner = this.factory as MinerDef;
         let rate;
-        if (InitState.useLegacyCalculations) {
+        if (useLegacyCalculations) {
             rate = miner.mining_power.sub(recipe.hardness);
         } else {
             rate = one;
@@ -360,9 +361,9 @@ class Miner extends Factory {
 const rocketLaunchDuration = RationalFromFloats(2475, 60);
 
 function launchRate(spec: FactorySpec) {
-    const partRecipe = InitState.solver.recipes["rocket-part"];
+    const partRecipe = solver.recipes["rocket-part"];
     const partFactory = spec.getFactory(partRecipe);
-    const partItem = InitState.solver.items["rocket-part"];
+    const partItem = solver.items["rocket-part"];
     const gives = partRecipe.gives(partItem, spec);
     // The base rate at which the silo can make rocket parts.
     const rate = Factory.prototype.recipeRate.call(partFactory, spec, partRecipe);
@@ -482,7 +483,7 @@ class FactorySpec {
         }
         let factoryDef;
         for (factoryDef of factories) {
-            if (!(factoryDef.less(this.minimum) || InitState.useLegacyCalculations &&
+            if (!(factoryDef.less(this.minimum) || useLegacyCalculations &&
                 factoryDef.max_ing < recipe.ingredients.length)) {
                 break;
             }
@@ -629,7 +630,7 @@ function getFactories(data: Data) {
     const boilerDef = data.boiler.boiler;
     // XXX: Should derive this from game data.
     let boiler_energy: Rational;
-    if (InitState.useLegacyCalculations) {
+    if (useLegacyCalculations) {
         boiler_energy = RationalFromFloat(3600000);
     } else {
         boiler_energy = RationalFromFloat(1800000);

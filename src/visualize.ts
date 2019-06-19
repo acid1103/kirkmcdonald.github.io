@@ -6,12 +6,13 @@ import { displayCount, displayRate, formatName } from "./display";
 import { GraphClickHandler, GraphMouseLeaveHandler, GraphMouseOverHandler } from "./events";
 import { Factory, FactoryDef } from "./factory";
 import { IIconned, PX_HEIGHT, PX_WIDTH } from "./icon";
+import { solver, spec, spriteSheetSize } from "./init";
 import { Item } from "./item";
 import { one, Rational, zero } from "./rational";
 import { Ingredient, Recipe } from "./recipe";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
-import { IconState, InitState, SettingsState, TargetState } from "./window-interface";
+import { IconState, SettingsState, TargetState } from "./window-interface";
 
 const colorList = [
     "#1f77b4", // blue
@@ -33,7 +34,7 @@ class OutputRecipe {
         this.ingredients = [];
         for (let i = 0; i < TargetState.build_targets.length; i++) {
             const target = TargetState.build_targets[i];
-            const item = InitState.solver.items[target.itemName];
+            const item = solver.items[target.itemName];
             const ing = new Ingredient(target.getRate(), item);
             this.ingredients.push(ing);
         }
@@ -48,7 +49,7 @@ class SurplusRecipe {
         this.ingredients = [];
         for (const itemName in totals.waste) {
             const rate = totals.waste[itemName];
-            const item = InitState.solver.items[itemName];
+            const item = solver.items[itemName];
             const ing = new Ingredient(rate, item);
             this.ingredients.push(ing);
         }
@@ -82,9 +83,9 @@ function makeGraph(totals: Totals, ignore: IObjectMap<boolean>) {
     }
     for (const recipeName in totals.totals) {
         const rate = totals.totals[recipeName];
-        const recipe = InitState.solver.recipes[recipeName];
-        const factory = InitState.spec.getFactory(recipe);
-        const factoryCount = InitState.spec.getCount(recipe, rate);
+        const recipe = solver.recipes[recipeName];
+        const factory = spec.getFactory(recipe);
+        const factoryCount = spec.getCount(recipe, rate);
         const node = new GraphNode(
             recipeName,
             recipe,
@@ -103,7 +104,7 @@ function makeGraph(totals: Totals, ignore: IObjectMap<boolean>) {
         }
         let ingredients: Ingredient[] = [];
         if (recipe.fuelIngredient) {
-            ingredients = recipe.fuelIngredient(InitState.spec);
+            ingredients = recipe.fuelIngredient(spec);
         }
         const fuelIngCount = ingredients.length;
         ingredients = ingredients.concat(recipe.ingredients);
@@ -112,7 +113,7 @@ function makeGraph(totals: Totals, ignore: IObjectMap<boolean>) {
             let totalRate = zero;
             for (const subRecipe of ing.item.recipes) {
                 if (subRecipe.name in totals.totals) {
-                    totalRate = totalRate.add(totals.totals[subRecipe.name].mul(subRecipe.gives(ing.item, InitState.spec)));
+                    totalRate = totalRate.add(totals.totals[subRecipe.name].mul(subRecipe.gives(ing.item, spec)));
                 }
             }
             for (const subRecipe of ing.item.recipes) {
@@ -124,7 +125,7 @@ function makeGraph(totals: Totals, ignore: IObjectMap<boolean>) {
                         rate = totals.totals[recipe.name].mul(ing.amount);
                     }
                     const ratio = rate.div(totalRate);
-                    const subRate = totals.totals[subRecipe.name].mul(subRecipe.gives(ing.item, InitState.spec)).mul(ratio);
+                    const subRate = totals.totals[subRecipe.name].mul(subRecipe.gives(ing.item, spec)).mul(ratio);
                     let value = subRate.toFloat();
                     if (ing.item.phase === "fluid") {
                         value /= 10;
@@ -354,7 +355,7 @@ function itemNeighbors(item: Item, fuelLinks: Map<Item, Recipe[]>) {
     for (const recipe of recipes) {
         let ingredients = recipe.ingredients.concat(recipe.products);
         if (recipe.fuelIngredient) {
-            ingredients = ingredients.concat(recipe.fuelIngredient(InitState.spec));
+            ingredients = ingredients.concat(recipe.fuelIngredient(spec));
         }
         for (const ing of ingredients) {
             touching.add(ing.item);
@@ -506,7 +507,7 @@ function linkTitle(d: SankeyGraphEdge) {
 
 function renderGraph(totals: Totals, ignore: IObjectMap<boolean>) {
     const direction = SettingsState.visDirection;
-    const [sheetWidth, sheetHeight] = InitState.spriteSheetSize;
+    const [sheetWidth, sheetHeight] = spriteSheetSize;
     const data = makeGraph(totals, ignore);
     if (SettingsState.visualizer === "box") {
         renderBoxGraph(

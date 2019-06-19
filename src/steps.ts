@@ -2,8 +2,8 @@ import $ = require("jquery");
 import { alignCount, alignRate, Header } from "./display";
 import { PipeCountHandler, PipeLengthHandler } from "./events";
 import { getImage } from "./icon";
+import { solver } from "./init";
 import { one, Rational, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
-import { InitState } from "./window-interface";
 
 // The name "steps" dates back to the earliest versions of this calculator and
 // is now probably a misnomer. It originally referred to the "steps" you had
@@ -65,7 +65,7 @@ class PipeConfig {
         const def = defaultPipe(rate);
         this.minLanes = rate.div(RationalFromFloat(12000)).ceil();
         this.element = document.createElement("td");
-        const pipeItem = InitState.solver.items.pipe;
+        const pipeItem = solver.items.pipe;
         this.element.appendChild(getImage(pipeItem));
         this.element.appendChild(new Text(" \u00d7 "));
         this.laneInput = document.createElement("input");

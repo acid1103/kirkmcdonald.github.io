@@ -6,8 +6,12 @@ import { FactoryDef } from "./factory";
 import { formatSettings } from "./fragment";
 import { Fuel } from "./fuel";
 import {
+    initDone,
     loadData,
+    recipeTable,
     reset,
+    solver,
+    spec,
 } from "./init";
 import { Item } from "./item";
 import { Module } from "./module";
@@ -27,8 +31,8 @@ import {
 import { PipeConfig } from "./steps";
 import { addTarget, BuildTarget, isFactoryTarget } from "./target";
 import { IObjectMap } from "./utility-types";
-import { DisplayState, window as TempGlobals, SettingsState, InitState, EventsState, TargetState, GraphNode } from "./window-interface";
 import { renderGraph } from "./visualize";
+import { DisplayState, SettingsState, EventsState, TargetState, GraphNode } from "./window-interface";
 
 // build target events
 
@@ -189,15 +193,15 @@ function changeMin(min: string) {
 
 // Triggered when the furnace is changed.
 function changeFurnace(furnace: FactoryDef) {
-    InitState.spec.setFurnace(furnace.name);
-    InitState.solver.findSubgraphs(InitState.spec);
+    spec.setFurnace(furnace.name);
+    solver.findSubgraphs(spec);
     itemUpdate();
 }
 
 // Triggered when the preferred fuel is changed.
 function changeFuel(fuel: Fuel) {
     setPreferredFuel(fuel.name);
-    InitState.solver.findSubgraphs(InitState.spec);
+    solver.findSubgraphs(spec);
     itemUpdate();
 }
 
@@ -227,21 +231,21 @@ function changePipeLength(event: JQuery.ChangeEvent<HTMLInputElement, null, HTML
 
 // Triggered when the mining productivity bonus is changed.
 function changeMprod() {
-    InitState.spec.miningProd = getMprod();
+    spec.miningProd = getMprod();
     itemUpdate();
 }
 
 // Triggered when the default module is changed.
 function changeDefaultModule(module: Module) {
-    InitState.spec.setDefaultModule(module);
-    InitState.recipeTable.updateDisplayedModules();
+    spec.setDefaultModule(module);
+    recipeTable.updateDisplayedModules();
     itemUpdate();
 }
 
 // Triggered when the default beacon module is changed.
 function changeDefaultBeacon(module: Module) {
-    InitState.spec.setDefaultBeacon(module, InitState.spec.defaultBeaconCount);
-    InitState.recipeTable.updateDisplayedModules();
+    spec.setDefaultBeacon(module, spec.defaultBeaconCount);
+    recipeTable.updateDisplayedModules();
     itemUpdate();
 }
 
@@ -250,8 +254,8 @@ function changeDefaultBeaconCount(
     event: JQuery.ChangeEvent<HTMLInputElement, null, HTMLInputElement, HTMLInputElement>
 ) {
     const count = RationalFromString(event.target.value);
-    InitState.spec.setDefaultBeacon(InitState.spec.defaultBeacon, count);
-    InitState.recipeTable.updateDisplayedModules();
+    spec.setDefaultBeacon(spec.defaultBeacon, count);
+    recipeTable.updateDisplayedModules();
     itemUpdate();
 }
 
@@ -306,11 +310,11 @@ function changeTooltip(event: JQuery.ChangeEvent<HTMLInputElement, null, HTMLInp
 
 function IgnoreHandler(row: RecipeRow) {
     return () => {
-        if (InitState.spec.ignore[row.name]) {
-            delete InitState.spec.ignore[row.name];
+        if (spec.ignore[row.name]) {
+            delete spec.ignore[row.name];
             row.setIgnore(false);
         } else {
-            InitState.spec.ignore[row.name] = true;
+            spec.ignore[row.name] = true;
             row.setIgnore(true);
         }
         itemUpdate();
@@ -320,7 +324,7 @@ function IgnoreHandler(row: RecipeRow) {
 // Triggered when a factory module is changed.
 function ModuleHandler(row: FactoryRow, index: number) {
     return (module: Module) => {
-        if (InitState.spec.setModule(row.recipe, index, module) || isFactoryTarget(row.recipe.name)) {
+        if (spec.setModule(row.recipe, index, module) || isFactoryTarget(row.recipe.name)) {
             itemUpdate();
         } else {
             display();
@@ -331,11 +335,11 @@ function ModuleHandler(row: FactoryRow, index: number) {
 // Triggered when the right-arrow "copy module" button is pressed.
 function ModuleCopyHandler(row: FactoryRow) {
     return () => {
-        const moduleCount = InitState.spec.moduleCount(row.recipe);
-        const module = InitState.spec.getModule(row.recipe, 0);
+        const moduleCount = spec.moduleCount(row.recipe);
+        const module = spec.getModule(row.recipe, 0);
         let needRecalc = false;
         for (let i = 0; i < moduleCount; i++) {
-            needRecalc = InitState.spec.setModule(row.recipe, i, module) || needRecalc;
+            needRecalc = spec.setModule(row.recipe, i, module) || needRecalc;
             row.setDisplayedModule(i, module);
         }
         if (needRecalc || isFactoryTarget(row.recipe.name)) {
@@ -348,8 +352,8 @@ function ModuleCopyHandler(row: FactoryRow) {
 
 // Gets Factory object for a corresponding recipe name.
 function getFactory(recipeName: string) {
-    const recipe = InitState.solver.recipes[recipeName];
-    return InitState.spec.getFactory(recipe);
+    const recipe = solver.recipes[recipeName];
+    return spec.getFactory(recipe);
 }
 
 // Triggered when a beacon module is changed.
@@ -382,20 +386,20 @@ function beaconCountHandler(recipeName: string) {
 // Triggered when the up/down arrow "copy to all recipes" button is pressed.
 function copyAllHandler(name: string) {
     return () => {
-        const factory = InitState.spec.spec[name];
+        const factory = spec.spec[name];
         let needRecalc = false;
-        for (const recipeName in InitState.spec.spec) {
+        for (const recipeName in spec.spec) {
             if (recipeName === name) {
                 continue;
             }
-            const f = InitState.spec.spec[recipeName];
+            const f = spec.spec[recipeName];
             if (!f) {
                 continue;
             }
-            const recipe = InitState.solver.recipes[recipeName];
+            const recipe = solver.recipes[recipeName];
             needRecalc = factory.copyModules(f, recipe) || needRecalc || isFactoryTarget(recipeName);
         }
-        InitState.recipeTable.updateDisplayedModules();
+        recipeTable.updateDisplayedModules();
         if (needRecalc) {
             itemUpdate();
         } else {
@@ -467,7 +471,7 @@ function clickTab(tabName: string) {
     $(".tab_button").removeClass("active");
     $(`#${tabName}`).css("display", "block");
     $(`#${tabMap[tabName]}`).addClass("active");
-    if (InitState.initDone) {
+    if (initDone) {
         window.location.hash = "#" + formatSettings();
     }
 }
@@ -475,7 +479,7 @@ function clickTab(tabName: string) {
 // Triggered when the "Visualize" tab is clicked on.
 function clickVisualize(tabName: string) {
     clickTab(tabName);
-    renderGraph(globalTotals, InitState.spec.ignore);
+    renderGraph(globalTotals, spec.ignore);
 }
 
 // debug event

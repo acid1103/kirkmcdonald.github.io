@@ -12,6 +12,7 @@ import {
 import { Factory } from "./factory";
 import { formatSettings } from "./fragment";
 import { getImage, IIconned } from "./icon";
+import { recipeTable, solver, spec, useLegacyCalculations } from "./init";
 import { Item } from "./item";
 import { Module, moduleDropdown } from "./module";
 import { one, Rational, RationalFromFloat, zero } from "./rational";
@@ -20,8 +21,8 @@ import { sorted } from "./sort";
 import { pipeLength } from "./steps";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
-import { DisplayState, InitState, SettingsState, window as TempGlobals, TargetState, EventsState } from "./window-interface";
 import { renderGraph } from "./visualize";
+import { DisplayState, EventsState, SettingsState, TargetState } from "./window-interface";
 
 function formatName(name: string) {
     name = name.replace(new RegExp("-", "g"), " ");
@@ -91,22 +92,22 @@ DisplayState.sortOrder = "topo";
 
 function pruneSpec(totals: Totals) {
     let drop: string[] = [];
-    for (const name in InitState.spec.spec) {
+    for (const name in spec.spec) {
         if (!(name in totals.totals)) {
             drop.push(name);
         }
     }
     for (const specIdx of drop) {
-        delete InitState.spec.spec[specIdx];
+        delete spec.spec[specIdx];
     }
     drop = [];
-    for (const name in InitState.spec.ignore) {
+    for (const name in spec.ignore) {
         if (!(name in totals.totals)) {
             drop.push(name);
         }
     }
     for (const ignoreIdx of drop) {
-        delete InitState.spec.ignore[ignoreIdx];
+        delete spec.ignore[ignoreIdx];
     }
 }
 
@@ -124,7 +125,7 @@ function itemUpdate() {
         const rate = target.getRate();
         rates[target.itemName] = rate;
     }
-    globalTotals = InitState.solver.solve(rates, InitState.spec.ignore, InitState.spec);
+    globalTotals = solver.solve(rates, spec.ignore, spec);
     display();
 }
 
@@ -182,7 +183,7 @@ class BeltIcon implements IIconned {
     public icon_row: number;
     constructor(beltItem?: Item, beltSpeed?: Rational) {
         if (!beltItem) {
-            beltItem = InitState.solver.items[SettingsState.preferredBelt];
+            beltItem = solver.items[SettingsState.preferredBelt];
         }
         if (!beltSpeed) {
             beltSpeed = SettingsState.preferredBeltSpeed;
@@ -255,7 +256,7 @@ class ItemRow implements IRow {
         const im = getImage(this.itemIcon);
         im.classList.add("display");
         if (canIgnore) {
-            if (InitState.spec.ignore[item.name]) {
+            if (spec.ignore[item.name]) {
                 this.itemIcon.setText("(Click to unignore.)");
             } else {
                 this.itemIcon.setText("(Click to ignore.)");
@@ -282,12 +283,12 @@ class ItemRow implements IRow {
             beltCountCell.appendChild(this.beltCountNode);
             row.appendChild(beltCountCell);
             // Wire off pipe icon in 0.17 for now.
-        } else if (item.phase === "fluid" && InitState.useLegacyCalculations) {
+        } else if (item.phase === "fluid" && useLegacyCalculations) {
             const pipeCell = document.createElement("td");
             pipeCell.colSpan = 2;
             pipeCell.classList.add("pad-right");
             row.appendChild(pipeCell);
-            const pipeItem = InitState.solver.items.pipe;
+            const pipeItem = solver.items.pipe;
             pipeCell.appendChild(getImage(pipeItem, true));
             this.pipeNode = document.createElement("tt");
             pipeCell.appendChild(this.pipeNode);
@@ -326,7 +327,7 @@ class ItemRow implements IRow {
     public setPipe(itemRate: Rational) {
         // 0.17 changes these fluid calculations, but the new model is not yet
         // fully known. Wire it off in 0.17 for now.
-        if (InitState.useLegacyCalculations) {
+        if (useLegacyCalculations) {
             if (itemRate.equal(zero)) {
                 this.pipeNode.textContent = " \u00d7 0";
                 return;
@@ -384,15 +385,15 @@ class RecipeRow implements IRow {
 
     constructor(recipeName: string, rate: Rational, itemRate: Rational, waste: Rational) {
         this.name = recipeName;
-        this.recipe = InitState.solver.recipes[recipeName];
+        this.recipe = solver.recipes[recipeName];
         this.rate = rate;
         this.node = document.createElement("tr");
         this.node.classList.add("recipe-row");
         this.node.classList.add("display-row");
         const canIgnore = this.recipe.canIgnore();
-        if (InitState.spec.ignore[recipeName]) {
+        if (spec.ignore[recipeName]) {
             if (!canIgnore) {
-                delete InitState.spec.ignore[recipeName];
+                delete spec.ignore[recipeName];
             } else {
                 this.node.classList.add("ignore");
             }
@@ -412,7 +413,7 @@ class RecipeRow implements IRow {
 
         // Set values.
         if (canIgnore) {
-            this.setIgnore(InitState.spec.ignore[recipeName]);
+            this.setIgnore(spec.ignore[recipeName]);
         }
         this.setRate(rate, itemRate, waste);
         this.factoryRow.updateDisplayedModules();
@@ -460,7 +461,7 @@ class RecipeRow implements IRow {
     }
 
     public csv() {
-        const rate = this.rate.mul(this.recipe.gives(this.item, InitState.spec));
+        const rate = this.rate.mul(this.recipe.gives(this.item, spec));
         let parts = [
             this.name,
             displayRate(rate),
@@ -626,12 +627,12 @@ class FactoryRow implements IRow {
     // of module slots, presence of the beacon info, and/or presence of the
     // module-copy buttons.
     public displayFactory(rate: Rational) {
-        this.count = InitState.spec.getCount(this.recipe, rate);
+        this.count = spec.getCount(this.recipe, rate);
         if (this.count.isZero()) {
             this.setHasNoModules();
             return;
         }
-        this.factory = InitState.spec.getFactory(this.recipe);
+        this.factory = spec.getFactory(this.recipe);
         const image = getImage(this.factory.factory);
         image.classList.add("display");
         while (this.factoryCell.hasChildNodes()) {
@@ -679,21 +680,21 @@ class FactoryRow implements IRow {
         } else {
             this.setHasNoModules();
         }
-        this.power = this.factory.powerUsage(InitState.spec, this.count);
+        this.power = this.factory.powerUsage(spec, this.count);
         this.setPower(this.power);
     }
 
     public updateDisplayedModules() {
-        const moduleCount = InitState.spec.moduleCount(this.recipe);
+        const moduleCount = spec.moduleCount(this.recipe);
         if (moduleCount === 0) {
             return;
         }
         for (let i = 0; i < moduleCount; i++) {
-            const module = InitState.spec.getModule(this.recipe, i);
+            const module = spec.getModule(this.recipe, i);
             this.setDisplayedModule(i, module);
         }
         // XXX
-        const beacon = InitState.spec.getBeaconInfo(this.recipe);
+        const beacon = spec.getBeaconInfo(this.recipe);
         this.setDisplayedBeacon(beacon.module, beacon.count);
     }
 
@@ -1038,13 +1039,13 @@ class RecipeTable {
         let group: RecipeGroup;
         for (const recipeName of sortedTotals) {
             const recipeRate = totals.totals[recipeName];
-            const recipe = InitState.solver.recipes[recipeName];
+            const recipe = solver.recipes[recipeName];
             for (const ing of recipe.products) {
                 if (!(ing.item.name in items)) {
                     // itemOrder.push(ing.item.name)
                     items[ing.item.name] = zero;
                 }
-                items[ing.item.name] = items[ing.item.name].add(recipeRate.mul(recipe.gives(ing.item, InitState.spec)));
+                items[ing.item.name] = items[ing.item.name].add(recipeRate.mul(recipe.gives(ing.item, spec)));
             }
             if (recipe.displayGroup === null) {
                 group = new RecipeGroup(null);
@@ -1175,9 +1176,9 @@ function display() {
     window.location.hash = "#" + formatSettings();
 
     if (EventsState.currentTab === "graph_tab") {
-        renderGraph(totals, InitState.spec.ignore);
+        renderGraph(totals, spec.ignore);
     }
-    InitState.recipeTable.displaySolution(totals);
+    recipeTable.displaySolution(totals);
     if (SettingsState.showDebug) {
         renderDebug();
     }

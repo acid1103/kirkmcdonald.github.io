@@ -1,6 +1,6 @@
 import { Data } from "./data";
+import { useLegacyCalculations } from "./init";
 import { Rational, RationalFromFloat } from "./rational";
-import { InitState } from "./window-interface";
 
 export class Belt {
     public name: string;
@@ -26,7 +26,7 @@ export function getBelts(data: Data) {
         const baseSpeed = RationalFromFloat(beltInfo.speed);
         const pixelsPerSecond = baseSpeed.mul(RationalFromFloat(3840));
         let speed;
-        if (InitState.useLegacyCalculations) {
+        if (useLegacyCalculations) {
             speed = pixelsPerSecond.div(RationalFromFloat(9));
         } else {
             speed = pixelsPerSecond.div(RationalFromFloat(8));

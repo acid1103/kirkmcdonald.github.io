@@ -1,11 +1,11 @@
 import { FactorySpec } from "./factory";
+import { useLegacyCalculations } from "./init";
 import { Item } from "./item";
 import { Matrix } from "./matrix";
 import { minusOne, one, Rational, zero } from "./rational";
 import { Recipe } from "./recipe";
 import { simplex } from "./simplex";
 import { IObjectMap } from "./utility-types";
-import { InitState } from "./window-interface";
 
 const PRIORITY = ["uranium-ore", "steam", "coal", "crude-oil", "water"];
 
@@ -194,7 +194,7 @@ class MatrixSolver {
                 if (prod.equal(one)) {
                     continue;
                 }
-                if (InitState.useLegacyCalculations) {
+                if (useLegacyCalculations) {
                     for (const ing of recipe.products) {
                         const k = this.itemIndexes[ing.item.name];
                         A.setIndex(i, k, zero);

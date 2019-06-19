@@ -12,8 +12,9 @@ import {
     searchTargets,
 } from "./events";
 import { getImage } from "./icon";
+import { itemGroups, solver, spec } from "./init";
 import { one, Rational, RationalFromString, zero } from "./rational";
-import { TargetState, InitState, SettingsState } from "./window-interface";
+import { TargetState, SettingsState } from "./window-interface";
 
 const DEFAULT_ITEM = "advanced-circuit";
 
@@ -36,7 +37,7 @@ function isFactoryTarget(recipeName: string) {
         }
     }
     for (const target of TargetState.build_targets) {
-        const item = InitState.solver.items[target.itemName];
+        const item = solver.items[target.itemName];
         for (const recipe of item.recipes) {
             if (recipe.name === recipeName && target.changedFactory) {
                 return true;
@@ -96,7 +97,7 @@ class BuildTarget {
             .attr("placeholder", "Search")
             .on("keyup", searchTargets);
         const group = dropdown.selectAll("div")
-            .data(InitState.itemGroups)
+            .data(itemGroups)
             .join("div");
         group.filter((d, i) => i > 0)
             .append("hr");
@@ -158,7 +159,7 @@ class BuildTarget {
         while (this.recipeSelector.hasChildNodes()) {
             this.recipeSelector.removeChild(this.recipeSelector.lastChild);
         }
-        const item = InitState.solver.items[this.itemName];
+        const item = solver.items[this.itemName];
         if (item.recipes.length <= 1) {
             return;
         }
@@ -180,16 +181,16 @@ class BuildTarget {
     // the text boxes in response to changes in options.
     public getRate() {
         this.setRateLabel();
-        const item = InitState.solver.items[this.itemName];
+        const item = solver.items[this.itemName];
         let rate = zero;
         // XXX: Hmmm...
         const recipe = item.recipes[this.recipeIndex];
         if (!recipe.category && this.changedFactory) {
             this.rateChanged();
         }
-        let baseRate = InitState.spec.recipeRate(recipe);
+        let baseRate = spec.recipeRate(recipe);
         if (baseRate) {
-            baseRate = baseRate.mul(recipe.gives(item, InitState.spec));
+            baseRate = baseRate.mul(recipe.gives(item, spec));
         }
         if (this.changedFactory) {
             rate = baseRate.mul(this.factoriesValue);

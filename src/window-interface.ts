@@ -1,5 +1,3 @@
-const windowTempGlobals = window as unknown as TempGlobals;
-const windowInitState = window as unknown as InitState;
 const windowSettingsState = window as unknown as SettingsState;
 const windowIconState = window as unknown as IconState;
 const windowDisplayState = window as unknown as DisplayState;
@@ -7,8 +5,6 @@ const windowEventsState = window as unknown as EventsState;
 const windowTargetState = window as unknown as TargetState;
 
 export {
-    windowTempGlobals as window,
-    windowInitState as InitState,
     windowSettingsState as SettingsState,
     windowIconState as IconState,
     windowDisplayState as DisplayState,
@@ -19,97 +15,14 @@ export {
 export type GraphEdge = any;
 export type GraphNode = any;
 
-import d3 = require("d3");
-import dagre = require("dagre");
-import pako = require("pako");
-import { sprintf } from "sprintf-js";
-import { Belt } from "./belt";
-import { CirclePath, makeCurve } from "./circlepath";
 import { ColorScheme } from "./color";
-import { RecipeTable, displayCount, displayRate, formatName } from "./display";
-import { addInputs, makeDropdown } from "./dropdown";
-import { Factory, FactoryDef, FactorySpec } from "./factory";
-import { formatSettings } from "./fragment";
 import { Fuel } from "./fuel";
-import { getExtraImage, getImage, PX_HEIGHT, PX_WIDTH } from "./icon";
-import { loadData, reset } from "./init";
-import { getItem, Item } from "./item";
-import { Matrix } from "./matrix";
-import { Module, moduleDropdown } from "./module";
-import {
-    half,
-    minusOne,
-    one,
-    Rational,
-    RationalFromFloat,
-    RationalFromFloats,
-    RationalFromString,
-    zero,
-} from "./rational";
-import { Ingredient, MiningRecipe, Recipe } from "./recipe";
-import {
-    currentMod,
-    getMprod,
-    Modification,
-    Oil,
-    setColorScheme,
-    setKovarex,
-    setMinimumAssembler,
-    setMinPipe,
-    setOilRecipe,
-    setPreferredBelt,
-    setPreferredFuel,
-} from "./settings";
-import { simplex } from "./simplex";
-import { Solver } from "./solve";
-import { sorted } from "./sort";
-import { findGroups } from "./subgraphs";
+import { Rational } from "./rational";
+import { Modification, Oil } from "./settings";
 import { BuildTarget } from "./target";
-import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
-import { MatrixSolver } from "./vectorize";
-import { GraphClickHandler, GraphMouseLeaveHandler, GraphMouseOverHandler } from "./events";
-import { colorList, getColorMaps, iconSize, imageViewBox, renderNode } from "./visualize";
-
-export function initWindow() {
-    // // dagre
-    // (window as any).dagre = dagre;
-    // (window as any).displayRate = displayRate;
-    // (window as any).formatName = formatName;
-
-    // // events.ts
-    // (window as any).GraphClickHandler = GraphClickHandler;
-    // (window as any).GraphMouseLeaveHandler = GraphMouseLeaveHandler;
-    // (window as any).GraphMouseOverHandler = GraphMouseOverHandler;
-
-    // // visualize.ts
-    // (window as any).colorList = colorList;
-    // (window as any).getColorMaps = getColorMaps;
-    // (window as any).iconSize = iconSize;
-    // (window as any).imageViewBox = imageViewBox;
-    // (window as any).renderNode = renderNode;
-}
 
 // tslint:disable: interface-over-type-literal
-type TempGlobals = {
-};
-
-type InitState = {
-    recipeTable: RecipeTable;
-    solver: Solver;
-    spec: FactorySpec;
-    modules: IObjectMap<Module>;
-    sortedModules: string[];
-    shortModules: IObjectMap<Module>;
-    moduleRows: Module[][];
-    belts: Belt[];
-    fuel: Fuel[];
-    itemGroups: Item[][][];
-    useLegacyCalculations: boolean;
-    spriteSheetSize: number[];
-    initDone: boolean;
-    OVERRIDE: string;
-};
 
 type SettingsState = {
     MODIFICATIONS: IObjectMap<Modification>;

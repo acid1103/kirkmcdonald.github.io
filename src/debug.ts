@@ -1,7 +1,7 @@
 import { getImage } from "./icon";
+import { solver } from "./init";
 import { Matrix } from "./matrix";
 import { MatrixSolver } from "./vectorize";
-import { InitState } from "./window-interface";
 
 function getSolutionHeader(matrixSolver: MatrixSolver, costHeader: boolean) {
     const row = document.createElement("tr");
@@ -76,7 +76,7 @@ function renderDebug() {
     node.id = "matrixes";
     debugTab.replaceChild(node, oldMatrixes);
 
-    for (const matrixSolver of InitState.solver.matrixSolvers) {
+    for (const matrixSolver of solver.matrixSolvers) {
         const A = matrixSolver.matrix;
         const table = renderMatrix(matrixSolver, A, true);
         node.appendChild(table);
@@ -87,7 +87,7 @@ function renderDebug() {
     node.id = "solution";
     debugTab.replaceChild(node, oldSolutions);
 
-    for (const matrixSolver of InitState.solver.matrixSolvers) {
+    for (const matrixSolver of solver.matrixSolvers) {
         let A = matrixSolver.lastProblem;
         if (A) {
             const table = renderMatrix(matrixSolver, A, false);

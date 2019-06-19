@@ -1,6 +1,6 @@
 import d3 = require("d3");
 import $ = require("jquery");
-import { getBelts } from "./belt";
+import { Belt, getBelts } from "./belt";
 import { Data } from "./data";
 import { globalTotals, itemUpdate, pruneSpec, RecipeTable } from "./display";
 import {
@@ -28,10 +28,11 @@ import {
 } from "./events";
 import { FactorySpec, getFactories } from "./factory";
 import { formatSettings, loadSettings } from "./fragment";
-import { getFuel } from "./fuel";
+import { Fuel, getFuel } from "./fuel";
 import { getItemGroups } from "./group";
 import { getSprites } from "./icon";
-import { getModules } from "./module";
+import { Item } from "./item";
+import { getModules, Module } from "./module";
 import { RationalFromFloat } from "./rational";
 import { getRecipeGraph } from "./recipe";
 import { addOverrideOptions, currentMod, renderDataSetOptions, renderSettings } from "./settings";
@@ -39,7 +40,7 @@ import { Solver } from "./solve";
 import { sorted } from "./sort";
 import { addTarget } from "./target";
 import { IObjectMap } from "./utility-types";
-import { EventsState, InitState, initWindow, SettingsState, TargetState } from "./window-interface";
+import { EventsState, SettingsState, TargetState } from "./window-interface";
 
 (window as any).d3 = d3;
 
@@ -51,31 +52,31 @@ const readyStateCheckInterval = setInterval(() => {
     }
 }, 10);
 
-InitState.recipeTable = null;
+let recipeTable: RecipeTable = null;
 // Contains collections of items and recipes. (solve.js)
-InitState.solver = null;
+let solver: Solver = null;
 // Contains module and factory settings, as well as other settings. (factory.js)
-InitState.spec = null;
+let spec: FactorySpec = null;
 // Map from module name to Module object.
-InitState.modules = null;
+let modules: IObjectMap<Module> = null;
 // Array of modules, sorted by 'order'.
-InitState.sortedModules = null;
+let sortedModules: string[] = null;
 // Map from short module name to Module object.
-InitState.shortModules = null;
+let shortModules: IObjectMap<Module> = null;
 // Array of arrays of modules, separated by category and sorted.
-InitState.moduleRows = null;
+let moduleRows: Module[][] = null;
 // Array of Belt objects, sorted by speed.
-InitState.belts = null;
+let belts: Belt[] = null;
 // Array of Fuel objects, sorted by value.
-InitState.fuel = null;
+let fuel: Fuel[] = null;
 // Array of item groups, in turn divided into subgroups. For display purposes.
-InitState.itemGroups = null;
+let itemGroups: Item[][][] = null;
 // Boolean with whether to use old (0.16) calculations.
-InitState.useLegacyCalculations = false;
+let useLegacyCalculations: boolean = false;
 // Size of the sprite sheet, as [x, y] array.
-InitState.spriteSheetSize = null;
-InitState.initDone = false;
-InitState.OVERRIDE = null;
+let spriteSheetSize: number[] = null;
+let initDone: boolean = false;
+let OVERRIDE: string = null;
 
 // Set the page back to a state immediately following initial setup, but before
 // the dataset is loaded for the first time.
@@ -107,8 +108,8 @@ function loadDataRunner(modName: string, callback: (data: Data) => void) {
     if (!mod) {
         mod = SettingsState.MODIFICATIONS[SettingsState.DEFAULT_MODIFICATION];
     }
-    InitState.spriteSheetSize = mod.sheetSize;
-    InitState.useLegacyCalculations = mod.legacy;
+    spriteSheetSize = mod.sheetSize;
+    useLegacyCalculations = mod.legacy;
     const filename = "data/" + mod.filename;
     xobj.overrideMimeType("application/json");
     xobj.open("GET", filename, true);
@@ -122,51 +123,51 @@ function loadDataRunner(modName: string, callback: (data: Data) => void) {
 }
 
 function loadData(modName: string, settings?: IObjectMap<string>) {
-    InitState.recipeTable = new RecipeTable($("#totals")[0]);
+    recipeTable = new RecipeTable($("#totals")[0]);
     if (!settings) {
         settings = {};
     }
     loadDataRunner(modName, function(data) {
         getSprites(data);
         const graph = getRecipeGraph(data);
-        InitState.modules = getModules(data);
-        InitState.sortedModules = sorted(InitState.modules, (m: string) => InitState.modules[m].order);
-        InitState.moduleRows = [];
+        modules = getModules(data);
+        sortedModules = sorted(modules, (m: string) => modules[m].order);
+        moduleRows = [];
         let category = null;
-        for (const moduleName of InitState.sortedModules) {
-            const module = InitState.modules[moduleName];
+        for (const moduleName of sortedModules) {
+            const module = modules[moduleName];
             if (module.category !== category) {
                 category = module.category;
-                InitState.moduleRows.push([]);
+                moduleRows.push([]);
             }
-            InitState.moduleRows[InitState.moduleRows.length - 1].push(module);
+            moduleRows[moduleRows.length - 1].push(module);
         }
-        InitState.shortModules = {};
-        for (const moduleName in InitState.modules) {
-            const module = InitState.modules[moduleName];
-            InitState.shortModules[module.shortName()] = module;
+        shortModules = {};
+        for (const moduleName in modules) {
+            const module = modules[moduleName];
+            shortModules[module.shortName()] = module;
         }
         const factories = getFactories(data);
-        InitState.spec = new FactorySpec(factories);
+        spec = new FactorySpec(factories);
         if ("ignore" in settings) {
             const ignore = settings.ignore.split(",");
             for (let i = 0; i < ignore.length; i++) {
-                InitState.spec.ignore[ignore[i]] = true;
+                spec.ignore[ignore[i]] = true;
             }
         }
 
         const items = graph[0];
         const recipes = graph[1];
 
-        InitState.belts = getBelts(data);
-        InitState.fuel = getFuel(data, items).chemical;
+        belts = getBelts(data);
+        fuel = getFuel(data, items).chemical;
 
-        InitState.itemGroups = getItemGroups(items, data);
-        InitState.solver = new Solver(items, recipes);
+        itemGroups = getItemGroups(items, data);
+        solver = new Solver(items, recipes);
 
         renderSettings(settings);
 
-        InitState.solver.findSubgraphs(InitState.spec);
+        solver.findSubgraphs(spec);
 
         if ("items" in settings && settings.items !== "") {
             const targets = settings.items.split(",");
@@ -210,15 +211,15 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
                     const moduleName = moduleNameList[j];
                     if (moduleName) {
                         let module;
-                        if (moduleName in InitState.modules) {
-                            module = InitState.modules[moduleName];
-                        } else if (moduleName in InitState.shortModules) {
-                            module = InitState.shortModules[moduleName];
+                        if (moduleName in modules) {
+                            module = modules[moduleName];
+                        } else if (moduleName in shortModules) {
+                            module = shortModules[moduleName];
                         } else if (moduleName === "null") {
                             module = null;
                         }
                         if (module !== undefined) {
-                            InitState.spec.setModule(recipe, j, module);
+                            spec.setModule(recipe, j, module);
                         }
                     }
                 }
@@ -226,14 +227,14 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
                     const beaconSettingsSplit = beaconSettings.split(":");
                     const moduleName = beaconSettingsSplit[0];
                     let module;
-                    if (moduleName in InitState.modules) {
-                        module = InitState.modules[moduleName];
-                    } else if (moduleName in InitState.shortModules) {
-                        module = InitState.shortModules[moduleName];
+                    if (moduleName in modules) {
+                        module = modules[moduleName];
+                    } else if (moduleName in shortModules) {
+                        module = shortModules[moduleName];
                     } else if (moduleName === "null") {
                         module = null;
                     }
-                    const factory = InitState.spec.getFactory(recipe);
+                    const factory = spec.getFactory(recipe);
                     if (factory) {
                         const count = RationalFromFloat(Number(beaconSettingsSplit[1]));
                         factory.beaconModule = module;
@@ -242,7 +243,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
                 }
             }
         }
-        InitState.initDone = true;
+        initDone = true;
         itemUpdate();
 
         // Prune factory spec after first solution is calculated.
@@ -291,8 +292,8 @@ function init() {
     $("#render_debug").change(toggleDebug);
 
     const settings = loadSettings(window.location.hash);
-    if (InitState.OVERRIDE !== null) {
-        addOverrideOptions(InitState.OVERRIDE);
+    if (OVERRIDE !== null) {
+        addOverrideOptions(OVERRIDE);
     }
     renderDataSetOptions(settings);
     if ("tab" in settings) {
@@ -307,6 +308,15 @@ function init() {
 export {
     reset,
     loadData,
+    recipeTable,
+    solver,
+    spec,
+    shortModules,
+    moduleRows,
+    belts,
+    fuel,
+    itemGroups,
+    useLegacyCalculations,
+    spriteSheetSize,
+    initDone,
 };
-
-initWindow();

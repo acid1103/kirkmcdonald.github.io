@@ -3,6 +3,7 @@ import { Data } from "./data";
 import { formatName, NO_MODULE } from "./display";
 import { addInputs, makeDropdown } from "./dropdown";
 import { getExtraImage, getImage, IIconned } from "./icon";
+import { moduleRows } from "./init";
 import {
     Rational,
     RationalFromFloat,
@@ -10,7 +11,6 @@ import {
 } from "./rational";
 import { Recipe } from "./recipe";
 import { IObjectMap } from "./utility-types";
-import { InitState } from "./window-interface";
 
 class Module implements IIconned {
     public name: string;
@@ -142,7 +142,7 @@ function moduleDropdown(
     callback: (module: Module) => void,
     filter?: (d: Module) => boolean,
 ) {
-    const rows: Module[][] = [[null]].concat(InitState.moduleRows);
+    const rows: Module[][] = [[null]].concat(moduleRows);
 
     const dropdown = makeDropdown(selection);
     let options = dropdown.selectAll("div")

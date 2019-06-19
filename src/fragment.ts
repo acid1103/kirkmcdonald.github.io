@@ -2,12 +2,13 @@ import pako = require("pako");
 import { sprintf } from "sprintf-js";
 import { globalTotals } from "./display";
 import { DEFAULT_TAB } from "./events";
+import { spec } from "./init";
 import { Rational, RationalFromFloat } from "./rational";
 import {
     currentMod,
 } from "./settings";
 import { IObjectMap } from "./utility-types";
-import { InitState, SettingsState, window as TempGlobals, EventsState, TargetState } from "./window-interface";
+import { SettingsState, EventsState, TargetState } from "./window-interface";
 
 function formatSettings(targets?: IObjectMap<Rational>) {
     let settings = "";
@@ -36,8 +37,8 @@ function formatSettings(targets?: IObjectMap<Rational>) {
     if (SettingsState.minimumAssembler !== SettingsState.DEFAULT_MINIMUM) {
         settings += "min=" + SettingsState.minimumAssembler + "&";
     }
-    if (InitState.spec.furnace.name !== SettingsState.DEFAULT_FURNACE) {
-        settings += "furnace=" + InitState.spec.furnace.name + "&";
+    if (spec.furnace.name !== SettingsState.DEFAULT_FURNACE) {
+        settings += "furnace=" + spec.furnace.name + "&";
     }
     if (SettingsState.preferredFuel.name !== SettingsState.DEFAULT_FUEL) {
         settings += "fuel=" + SettingsState.preferredFuel.name + "&";
@@ -54,19 +55,19 @@ function formatSettings(targets?: IObjectMap<Rational>) {
     if (!SettingsState.minPipeLength.equal(SettingsState.DEFAULT_PIPE)) {
         settings += "pipe=" + SettingsState.minPipeLength.toDecimal(0) + "&";
     }
-    if (!InitState.spec.miningProd.isZero()) {
+    if (!spec.miningProd.isZero()) {
         const hundred = RationalFromFloat(100);
-        const mprod = InitState.spec.miningProd.mul(hundred).toString();
+        const mprod = spec.miningProd.mul(hundred).toString();
         settings += "mprod=" + mprod + "&";
     }
-    if (InitState.spec.defaultModule) {
-        settings += "dm=" + InitState.spec.defaultModule.shortName() + "&";
+    if (spec.defaultModule) {
+        settings += "dm=" + spec.defaultModule.shortName() + "&";
     }
-    if (InitState.spec.defaultBeacon) {
-        settings += "db=" + InitState.spec.defaultBeacon.shortName() + "&";
+    if (spec.defaultBeacon) {
+        settings += "db=" + spec.defaultBeacon.shortName() + "&";
     }
-    if (!InitState.spec.defaultBeaconCount.isZero()) {
-        settings += "dbc=" + InitState.spec.defaultBeaconCount.toDecimal(0) + "&";
+    if (!spec.defaultBeaconCount.isZero()) {
+        settings += "dbc=" + spec.defaultBeaconCount.toDecimal(0) + "&";
     }
     if (SettingsState.visualizer !== SettingsState.DEFAULT_VISUALIZER) {
         settings += "vis=" + SettingsState.visualizer + "&";
@@ -112,7 +113,7 @@ function formatSettings(targets?: IObjectMap<Rational>) {
     }
     settings += targetStrings.join(",");
     const ignore = [];
-    for (const recipeName in InitState.spec.ignore) {
+    for (const recipeName in spec.ignore) {
         if (recipeName in globalTotals.totals) {
             ignore.push(recipeName);
         }
@@ -121,16 +122,16 @@ function formatSettings(targets?: IObjectMap<Rational>) {
         settings += "&ignore=" + ignore.join(",");
     }
     const specs = [];
-    for (const recipeName in InitState.spec.spec) {
+    for (const recipeName in spec.spec) {
         if (!(recipeName in globalTotals.totals)) {
             continue;
         }
-        const factory = InitState.spec.spec[recipeName];
+        const factory = spec.spec[recipeName];
         const modules = [];
         let beacon = "";
         let any = false;
         for (const module of factory.modules) {
-            if (module !== InitState.spec.defaultModule) {
+            if (module !== spec.defaultModule) {
                 let moduleName;
                 if (module) {
                     moduleName = module.shortName();
@@ -141,7 +142,7 @@ function formatSettings(targets?: IObjectMap<Rational>) {
                 any = true;
             }
         }
-        if (factory.beaconModule !== InitState.spec.defaultBeacon || !factory.beaconCount.equal(InitState.spec.defaultBeaconCount)) {
+        if (factory.beaconModule !== spec.defaultBeacon || !factory.beaconCount.equal(spec.defaultBeaconCount)) {
             const beaconModule = factory.beaconModule;
             let moduleName;
             if (beaconModule) {
