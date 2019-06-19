@@ -43,9 +43,9 @@ function renderBoxGraph(
     const testSVG = d3.select("body").append("svg");
     const text = testSVG.append("text");
     for (const node of nodes) {
-        const width = node.labelWidth(text, 10);
-        const height = 52;
-        const label = { node, width, height };
+        const currWidth = node.labelWidth(text, 10);
+        const currHeight = 52;
+        const label = { node, width: currWidth, height: currHeight };
         g.setNode(node.name, label);
         node.linkObjs = [];
         node.links = function() { return this.linkObjs; };
@@ -56,14 +56,14 @@ function renderBoxGraph(
         const s = ` \u00d7 ${displayRate(link.rate)}/${SettingsState.rateName}`;
         text.text(s);
         const textWidth = text.node().getBBox().width;
-        const width = 32 + 10 + textWidth;
-        const height = 32 + 10;
+        const currWidth = 32 + 10 + textWidth;
+        const currHeight = 32 + 10;
         const label = {
-            link,
+            height: currHeight,
             labelpos: "c",
-            width,
-            height,
+            link,
             text: s,
+            width: currWidth,
             x: undefined as number,
             y: undefined as number,
         };
@@ -84,8 +84,8 @@ function renderBoxGraph(
         node.x1 = node.x0 + dagreNode.width;
         node.y1 = node.y0 + dagreNode.height;
     }
-    for (const edgeName of g.edges()) {
-        const dagreEdge = g.edge(edgeName);
+    for (const edge of g.edges()) {
+        const dagreEdge = g.edge(edge);
         const link = dagreEdge.link;
         link.points = dagreEdge.points;
     }

@@ -83,7 +83,7 @@ let useLegacyCalculations: boolean = false;
 // Size of the sprite sheet, as [x, y] array.
 let spriteSheetSize: number[] = null;
 let initDone: boolean = false;
-let OVERRIDE: string = null;
+const OVERRIDE: string = null;
 
 // Set the page back to a state immediately following initial setup, but before
 // the dataset is loaded for the first time.
@@ -120,7 +120,7 @@ function loadDataRunner(modName: string, callback: (data: Data) => void) {
     const filename = "data/" + mod.filename;
     xobj.overrideMimeType("application/json");
     xobj.open("GET", filename, true);
-    xobj.onreadystatechange = function() {
+    xobj.onreadystatechange = () => {
         if (xobj.readyState === 4 && xobj.status === 200) {
             const data = JSON.parse(xobj.responseText);
             callback(data);
@@ -134,7 +134,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
     if (!settings) {
         settings = {};
     }
-    loadDataRunner(modName, function(data) {
+    loadDataRunner(modName, (data) => {
         getSprites(data);
         const graph = getRecipeGraph(data);
         modules = getModules(data);
@@ -150,7 +150,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
             moduleRows[moduleRows.length - 1].push(module);
         }
         shortModules = {};
-        for (const moduleName in modules) {
+        for (const moduleName of Object.keys(modules)) {
             const module = modules[moduleName];
             shortModules[module.shortName()] = module;
         }
@@ -158,8 +158,8 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
         spec = new FactorySpec(factories);
         if ("ignore" in settings) {
             const ignore = settings.ignore.split(",");
-            for (let i = 0; i < ignore.length; i++) {
-                spec.ignore[ignore[i]] = true;
+            for (const currIgnore of ignore) {
+                spec.ignore[currIgnore] = true;
             }
         }
 
@@ -178,8 +178,7 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
 
         if ("items" in settings && settings.items !== "") {
             const targets = settings.items.split(",");
-            for (let i = 0; i < targets.length; i++) {
-                const targetString = targets[i];
+            for (const targetString of targets) {
                 const parts = targetString.split(":");
                 const name = parts[0];
                 const target = addTarget(name);
@@ -205,10 +204,10 @@ function loadData(modName: string, settings?: IObjectMap<string>) {
         }
         if ("modules" in settings && settings.modules !== "") {
             const moduleSettings = settings.modules.split(",");
-            for (let i = 0; i < moduleSettings.length; i++) {
-                const bothSettings = moduleSettings[i].split(";");
+            for (const currSettings of moduleSettings) {
+                const bothSettings = currSettings.split(";");
                 const factoryModuleSettings = bothSettings[0];
-                let beaconSettings = bothSettings[1];
+                const beaconSettings = bothSettings[1];
 
                 const singleModuleSettings = factoryModuleSettings.split(":");
                 const recipeName = singleModuleSettings[0];

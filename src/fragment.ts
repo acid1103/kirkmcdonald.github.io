@@ -125,8 +125,8 @@ function formatSettings(targets?: IObjectMap<Rational>) {
                     targetString += ";" + target.recipeIndex;
                 }
             } else {
-                targetString =
-                    sprintf("%s:r:%s", target.itemName, target.rateValue.mul(SettingsState.displayRateFactor).toString());
+                targetString = sprintf("%s:r:%s", target.itemName, target.rateValue.mul(SettingsState.displayRateFactor)
+                    .toString());
             }
             targetStrings.push(targetString);
         }
@@ -155,7 +155,7 @@ function formatSettings(targets?: IObjectMap<Rational>) {
         const factory = spec.spec[recipeName];
         const modules = [];
         let beacon = "";
-        let any = false;
+        let nonDefaultModules = false;
         for (const module of factory.modules) {
             if (module !== spec.defaultModule) {
                 let moduleName;
@@ -165,7 +165,7 @@ function formatSettings(targets?: IObjectMap<Rational>) {
                     moduleName = "null";
                 }
                 modules.push(moduleName);
-                any = true;
+                nonDefaultModules = true;
             }
         }
         if (factory.beaconModule !== spec.defaultBeacon || !factory.beaconCount.equal(spec.defaultBeaconCount)) {
@@ -177,9 +177,9 @@ function formatSettings(targets?: IObjectMap<Rational>) {
                 moduleName = "null";
             }
             beacon = sprintf("%s:%d", moduleName, factory.beaconCount.toFloat());
-            any = true;
+            nonDefaultModules = true;
         }
-        if (any) {
+        if (nonDefaultModules) {
             let recipeSpec = sprintf("%s:%s", recipeName, modules.join(":"));
             if (beacon !== "") {
                 recipeSpec += ";" + beacon;

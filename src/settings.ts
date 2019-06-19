@@ -15,7 +15,7 @@ import {
 } from "./events";
 import { Fuel } from "./fuel";
 import { getImage } from "./icon";
-import { belts, fuel, shortModules, solver, spec, } from "./init";
+import { belts, fuel, shortModules, solver, spec } from "./init";
 import { moduleDropdown } from "./module";
 import { one, Rational, RationalFromFloat, RationalFromFloats, RationalFromString, zero } from "./rational";
 import { pipeThroughput } from "./steps";
@@ -89,7 +89,7 @@ function normalizeDataSetName(modName: string) {
 function renderDataSetOptions(settings: IObjectMap<string>) {
     const modSelector = document.getElementById("data_set");
     const configuredMod = normalizeDataSetName(settings.data);
-    for (const modName in MODIFICATIONS) {
+    for (const modName of Object.keys(MODIFICATIONS)) {
         const mod = MODIFICATIONS[modName];
         const option = document.createElement("option");
         option.textContent = mod.name;
@@ -120,8 +120,7 @@ function renderColorScheme(settings: IObjectMap<string>) {
     setColorScheme(color);
     const colorSelector = document.getElementById("color_scheme");
     if (!colorSelector.hasChildNodes()) {
-        for (let i = 0; i < colorSchemes.length; i++) {
-            const scheme = colorSchemes[i];
+        for (const scheme of colorSchemes) {
             const option = document.createElement("option");
             option.textContent = scheme.displayName;
             option.value = scheme.name;
@@ -134,9 +133,9 @@ function renderColorScheme(settings: IObjectMap<string>) {
 }
 
 function setColorScheme(schemeName: string) {
-    for (let i = 0; i < colorSchemes.length; i++) {
-        if (colorSchemes[i].name === schemeName) {
-            colorScheme = colorSchemes[i];
+    for (const scheme of colorSchemes) {
+        if (scheme.name === schemeName) {
+            colorScheme = scheme;
             colorScheme.apply();
             return;
         }
@@ -174,7 +173,7 @@ function renderRateOptions(settings: IObjectMap<string>) {
     const cell = oldNode.parentNode;
     const node = document.createElement("form");
     node.id = "display_rate";
-    for (const name in displayRates) {
+    for (const name of Object.keys(displayRates)) {
         const rate = displayRates[name];
         const input = document.createElement("input");
         input.id = name + "_rate";
@@ -314,8 +313,7 @@ function renderFuel(settings: IObjectMap<string>) {
 }
 
 function setPreferredFuel(name: string) {
-    for (let i = 0; i < fuel.length; i++) {
-        const f = fuel[i];
+    for (const f of fuel) {
         if (f.name === name) {
             preferredFuel = f;
         }
@@ -430,8 +428,7 @@ function renderBelt(settings: IObjectMap<string>) {
 }
 
 function setPreferredBelt(name: string) {
-    for (let i = 0; i < belts.length; i++) {
-        const belt = belts[i];
+    for (const belt of belts) {
         if (belt.name === name) {
             preferredBelt = name;
             preferredBeltSpeed = belt.speed;

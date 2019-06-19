@@ -62,7 +62,7 @@ function resetSearch(dropdown: HTMLElement) {
 function searchTargets(this: HTMLInputElement) {
     const ev = d3.event;
     const search = this;
-    let search_text = search.value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const search_text = search.value.toLowerCase().replace(/[^a-z0-9]+/g, "");
     const dropdown = d3.select(search.parentNode as HTMLElement);
 
     if (!search_text) {
@@ -256,7 +256,7 @@ function changeDefaultBeacon(module: Module) {
 
 // Triggered when the default beacon count is changed.
 function changeDefaultBeaconCount(
-    event: JQuery.ChangeEvent<HTMLInputElement, null, HTMLInputElement, HTMLInputElement>
+    event: JQuery.ChangeEvent<HTMLInputElement, null, HTMLInputElement, HTMLInputElement>,
 ) {
     const count = RationalFromString(event.target.value);
     spec.setDefaultBeacon(spec.defaultBeacon, count);

@@ -371,9 +371,9 @@ function launchRate(spec: FactorySpec) {
     const perLaunch = RationalFromFloat(100).div(gives);
     // Total length of time required to launch a rocket.
     const time = perLaunch.div(rate).add(rocketLaunchDuration);
-    const launchRate = time.reciprocate();
-    const partRate = perLaunch.div(time);
-    return { part: partRate, launch: launchRate };
+    const launch = time.reciprocate();
+    const part = perLaunch.div(time);
+    return { part, launch };
 }
 
 class RocketLaunch extends Factory {

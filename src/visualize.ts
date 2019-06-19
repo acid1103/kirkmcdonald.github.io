@@ -33,8 +33,7 @@ class OutputRecipe {
     public products: Ingredient[];
     constructor() {
         this.ingredients = [];
-        for (let i = 0; i < TargetState.build_targets.length; i++) {
-            const target = TargetState.build_targets[i];
+        for (const target of TargetState.build_targets) {
             const item = solver.items[target.itemName];
             const ing = new Ingredient(target.getRate(), item);
             this.ingredients.push(ing);
@@ -48,7 +47,7 @@ class SurplusRecipe {
     public products: Ingredient[];
     constructor(totals: Totals) {
         this.ingredients = [];
-        for (const itemName in totals.waste) {
+        for (const itemName of Object.keys(totals.waste)) {
             const rate = totals.waste[itemName];
             const item = solver.items[itemName];
             const ing = new Ingredient(rate, item);
@@ -57,8 +56,6 @@ class SurplusRecipe {
         this.products = [];
     }
 }
-
-let image_id = zero;
 
 function makeGraph(totals: Totals, ignore: IObjectMap<boolean>) {
     const outputRecipe = new OutputRecipe();
@@ -82,7 +79,7 @@ function makeGraph(totals: Totals, ignore: IObjectMap<boolean>) {
         ));
         nodeMap.set("surplus", nodes[1]);
     }
-    for (const recipeName in totals.totals) {
+    for (const recipeName of Object.keys(totals.totals)) {
         const rate = totals.totals[recipeName];
         const recipe = solver.recipes[recipeName];
         const factory = spec.getFactory(recipe);
@@ -224,7 +221,6 @@ class GraphNode {
         this.factory = factory ? factory.factory : null;
         this.count = count;
         this.rate = rate;
-        //this.edgeHighlighters = []
     }
     public links() {
         return this.sourceLinks.concat(this.targetLinks);
@@ -406,11 +402,11 @@ function getColorMaps(nodes: GraphNode[], links: GraphEdge[]): [Map<Item, number
             }
         }
         itemsSet.delete(chosenItem);
-        let color = 0;
-        while (usedColors.has(color)) {
-            color++;
+        let currColor = 0;
+        while (usedColors.has(currColor)) {
+            currColor++;
         }
-        itemColors.set(chosenItem, color);
+        itemColors.set(chosenItem, currColor);
     }
     // This is intended to be taken modulo the number of colors when it is
     // actually used.
@@ -538,7 +534,8 @@ function renderGraph(totals: Totals, ignore: IObjectMap<boolean>) {
     text.remove();
     testSVG.remove();
 
-    let nw, np;
+    let nw;
+    let np;
     if (direction === "down") {
         nw = 36;
         np = maxNodeWidth;
@@ -559,27 +556,27 @@ function renderGraph(totals: Totals, ignore: IObjectMap<boolean>) {
     };
     const [itemColors, recipeColors] = getColorMaps(nodes, links);
 
-    for (const link of links) {
-        link.curve = linkPath(link);
+    for (const currLink of links) {
+        currLink.curve = linkPath(currLink);
         if (direction === "down") {
-            link.curve = link.curve.transpose();
+            currLink.curve = currLink.curve.transpose();
         }
         const belts: Array<{
             item: Item,
             curve: CirclePath,
         }> = [];
-        if (link.beltCount !== null) {
-            const dy = link.width / link.beltCount.toFloat();
+        if (currLink.beltCount !== null) {
+            const dy = currLink.width / currLink.beltCount.toFloat();
             // Only render belts if there are at least three pixels per belt.
             if (dy > 3) {
-                for (let i = one; i.less(link.beltCount); i = i.add(one)) {
-                    const offset = i.toFloat() * dy - link.width / 2;
-                    const beltCurve = link.curve.offset(offset);
-                    belts.push({ item: link.item, curve: beltCurve });
+                for (let i = one; i.less(currLink.beltCount); i = i.add(one)) {
+                    const offset = i.toFloat() * dy - currLink.width / 2;
+                    const beltCurve = currLink.curve.offset(offset);
+                    belts.push({ item: currLink.item, curve: beltCurve });
                 }
             }
         }
-        link.belts = belts;
+        currLink.belts = belts;
     }
 
     let width = 0;
