@@ -46,9 +46,8 @@ import {
 } from "./settings";
 import { Solver } from "./solve";
 import { sorted } from "./sort";
-import { addTarget } from "./target";
+import { addTarget, State as TargetState } from "./target";
 import { IObjectMap } from "./utility-types";
-import { TargetState } from "./window-interface";
 
 (window as any).d3 = d3;
 

@@ -31,10 +31,9 @@ import {
     State as SettingsState,
 } from "./settings";
 import { PipeConfig } from "./steps";
-import { addTarget, BuildTarget, isFactoryTarget } from "./target";
+import { addTarget, BuildTarget, isFactoryTarget, State as TargetState } from "./target";
 import { IObjectMap } from "./utility-types";
 import { GraphNode, renderGraph } from "./visualize";
-import { TargetState } from "./window-interface";
 
 const State = {} as {
     currentTab: string;

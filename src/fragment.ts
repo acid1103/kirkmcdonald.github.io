@@ -33,8 +33,8 @@ import {
     preferredFuel,
     State as SettingsState,
 } from "./settings";
+import { State as TargetState } from "./target";
 import { IObjectMap } from "./utility-types";
-import { TargetState } from "./window-interface";
 
 function formatSettings(targets?: IObjectMap<Rational>) {
     let settings = "";

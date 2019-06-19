@@ -11,9 +11,9 @@ import { Item } from "./item";
 import { one, Rational, zero } from "./rational";
 import { Ingredient, Recipe } from "./recipe";
 import { preferredBeltSpeed, State as SettingsState } from "./settings";
+import { State as TargetState } from "./target";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
-import { TargetState } from "./window-interface";
 
 const colorList = [
     "#1f77b4", // blue

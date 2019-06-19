@@ -15,15 +15,18 @@ import { getImage } from "./icon";
 import { itemGroups, solver, spec } from "./init";
 import { one, Rational, RationalFromString, zero } from "./rational";
 import { longRateNames, State as SettingsState } from "./settings";
-import { TargetState } from "./window-interface";
+
+const State = {} as {
+    build_targets: BuildTarget[];
+};
 
 const DEFAULT_ITEM = "advanced-circuit";
 
-TargetState.build_targets = [];
+State.build_targets = [];
 
 function addTarget(itemName?: string) {
-    const target = new BuildTarget(TargetState.build_targets.length, itemName);
-    TargetState.build_targets.push(target);
+    const target = new BuildTarget(State.build_targets.length, itemName);
+    State.build_targets.push(target);
     const targetList = document.getElementById("targets");
     const plus = targetList.replaceChild(target.element, targetList.lastChild);
     targetList.appendChild(plus);
@@ -37,7 +40,7 @@ function isFactoryTarget(recipeName: string) {
             return true;
         }
     }
-    for (const target of TargetState.build_targets) {
+    for (const target of State.build_targets) {
         const item = solver.items[target.itemName];
         for (const recipe of item.recipes) {
             if (recipe.name === recipeName && target.changedFactory) {
@@ -240,6 +243,7 @@ class BuildTarget {
 }
 
 export {
+    State,
     addTarget,
     isFactoryTarget,
     BuildTarget,

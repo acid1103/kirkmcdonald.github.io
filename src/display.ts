@@ -27,10 +27,10 @@ import {
 } from "./settings";
 import { sorted } from "./sort";
 import { pipeLength } from "./steps";
+import { State as TargetState } from "./target";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
 import { renderGraph } from "./visualize";
-import { TargetState } from "./window-interface";
 
 const State = {} as {
     sortOrder: string;
