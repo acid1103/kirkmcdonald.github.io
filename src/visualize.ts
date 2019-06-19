@@ -5,7 +5,7 @@ import { CirclePath, makeCurve } from "./circlepath";
 import { displayCount, displayRate, formatName } from "./display";
 import { GraphClickHandler, GraphMouseLeaveHandler, GraphMouseOverHandler } from "./events";
 import { Factory, FactoryDef } from "./factory";
-import { IIconned, PX_HEIGHT, PX_WIDTH } from "./icon";
+import { IIconned, PX_HEIGHT, PX_WIDTH, sheet_hash } from "./icon";
 import { solver, spec, spriteSheetSize } from "./init";
 import { Item } from "./item";
 import { one, Rational, zero } from "./rational";
@@ -13,7 +13,7 @@ import { Ingredient, Recipe } from "./recipe";
 import { preferredBeltSpeed, State as SettingsState } from "./settings";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
-import { IconState, TargetState } from "./window-interface";
+import { TargetState } from "./window-interface";
 
 const colorList = [
     "#1f77b4", // blue
@@ -303,7 +303,7 @@ function renderNode(
         .attr("height", iconSize)
         .append("image")
         .classed("ignore", (d) => ignore[d.recipe.name])
-        .attr("xlink:href", "images/sprite-sheet-" + IconState.sheet_hash + ".png")
+        .attr("xlink:href", "images/sprite-sheet-" + sheet_hash + ".png")
         .attr("width", sheetWidth)
         .attr("height", sheetHeight);
     labeledNode.append("text")
@@ -329,7 +329,7 @@ function renderNode(
         .attr("width", iconSize)
         .attr("height", iconSize)
         .append("image")
-        .attr("xlink:href", "images/sprite-sheet-" + IconState.sheet_hash + ".png")
+        .attr("xlink:href", "images/sprite-sheet-" + sheet_hash + ".png")
         .attr("width", sheetWidth)
         .attr("height", sheetHeight);
 }
@@ -670,7 +670,7 @@ function renderGraph(totals: Totals, ignore: IObjectMap<boolean>) {
         .attr("width", iconSize / 2)
         .attr("height", iconSize / 2);
     linkIcon.append("image")
-        .attr("xlink:href", "images/sprite-sheet-" + IconState.sheet_hash + ".png")
+        .attr("xlink:href", "images/sprite-sheet-" + sheet_hash + ".png")
         .attr("width", sheetWidth)
         .attr("height", sheetHeight);
     if (direction === "down") {

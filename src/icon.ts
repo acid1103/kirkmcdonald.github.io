@@ -2,7 +2,6 @@ import { Data } from "./data";
 import { State as SettingsState } from "./settings";
 import { Tooltip } from "./tooltip";
 import { IObjectMap } from "./utility-types";
-import { IconState } from "./window-interface";
 
 interface IIconned {
     name: string;
@@ -14,7 +13,7 @@ interface IIconned {
 const PX_WIDTH = 32;
 const PX_HEIGHT = 32;
 
-// IconState.sheet_hash = null;
+let sheet_hash: string;
 
 class Sprite implements IIconned {
     public name: string;
@@ -34,7 +33,7 @@ function getImage(obj: IIconned, suppressTooltip?: boolean, tooltipTarget?: HTML
     im.classList.add("icon");
     const x = -obj.icon_col * PX_WIDTH;
     const y = -obj.icon_row * PX_HEIGHT;
-    im.style.setProperty("background", "url(images/sprite-sheet-" + IconState.sheet_hash + ".png)");
+    im.style.setProperty("background", "url(images/sprite-sheet-" + sheet_hash + ".png)");
     im.style.setProperty("background-position", x + "px " + y + "px");
     if (SettingsState.tooltipsEnabled && obj.renderTooltip && !suppressTooltip) {
         addTooltip(im, obj, tooltipTarget);
@@ -65,7 +64,7 @@ function getExtraImage(name: string) {
 }
 
 function getSprites(data: Data) {
-    IconState.sheet_hash = data.sprites.hash;
+    sheet_hash = data.sprites.hash;
     sprites = {};
     for (const name of Object.keys(data.sprites.extra)) {
         const d = data.sprites.extra[name];
@@ -77,6 +76,7 @@ export {
     IIconned,
     PX_WIDTH,
     PX_HEIGHT,
+    sheet_hash,
     getImage,
     getExtraImage,
     getSprites,

@@ -2,10 +2,10 @@ import d3 = require("d3");
 import dagre = require("dagre");
 import { displayRate, formatName } from "./display";
 import { GraphClickHandler, GraphMouseLeaveHandler, GraphMouseOverHandler } from "./events";
+import { sheet_hash } from "./icon";
 import { State as SettingsState } from "./settings";
 import { IObjectMap } from "./utility-types";
 import { colorList, getColorMaps, GraphEdge, GraphNode, iconSize, imageViewBox, renderNode } from "./visualize";
-import { IconState } from "./window-interface";
 
 function edgePath(edge: BoxLineGraphEdge) {
     const start = edge.points[0];
@@ -167,7 +167,7 @@ function renderBoxGraph(
         .attr("width", iconSize)
         .attr("height", iconSize)
         .append("image")
-        .attr("xlink:href", "images/sprite-sheet-" + IconState.sheet_hash + ".png")
+        .attr("xlink:href", "images/sprite-sheet-" + sheet_hash + ".png")
         .attr("width", sheetWidth)
         .attr("height", sheetHeight);
     edgeLabels.append("text")
