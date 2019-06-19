@@ -34,7 +34,11 @@ import { PipeConfig } from "./steps";
 import { addTarget, BuildTarget, isFactoryTarget } from "./target";
 import { IObjectMap } from "./utility-types";
 import { GraphNode, renderGraph } from "./visualize";
-import { EventsState, TargetState } from "./window-interface";
+import { TargetState } from "./window-interface";
+
+const State = {} as {
+    currentTab: string;
+};
 
 // build target events
 
@@ -454,7 +458,7 @@ function GraphClickHandler(node: GraphNode) {
 
 const DEFAULT_TAB = "totals_tab";
 
-EventsState.currentTab = DEFAULT_TAB;
+State.currentTab = DEFAULT_TAB;
 
 const tabMap: IObjectMap<string> = {
     about_tab: "about_button",
@@ -468,7 +472,7 @@ const tabMap: IObjectMap<string> = {
 
 // Triggered when a tab is clicked on.
 function clickTab(tabName: string) {
-    EventsState.currentTab = tabName;
+    State.currentTab = tabName;
     $(".tab").css("display", "none");
     $(".tab_button").removeClass("active");
     $(`#${tabName}`).css("display", "block");
@@ -502,6 +506,7 @@ function toggleVisible(targetID: string) {
 }
 
 export {
+    State,
     plusHandler,
     resetSearch,
     searchTargets,

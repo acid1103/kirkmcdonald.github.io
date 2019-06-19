@@ -22,6 +22,7 @@ import {
     clickTab,
     clickVisualize,
     plusHandler,
+    State as EventsState,
     toggleDebug,
     toggleVisible,
     toggleVisualizerSettings,
@@ -47,7 +48,7 @@ import { Solver } from "./solve";
 import { sorted } from "./sort";
 import { addTarget } from "./target";
 import { IObjectMap } from "./utility-types";
-import { EventsState, TargetState } from "./window-interface";
+import { TargetState } from "./window-interface";
 
 (window as any).d3 = d3;
 

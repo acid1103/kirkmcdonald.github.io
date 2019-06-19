@@ -1,7 +1,7 @@
 import pako = require("pako");
 import { sprintf } from "sprintf-js";
 import { globalTotals } from "./display";
-import { DEFAULT_TAB } from "./events";
+import { DEFAULT_TAB, State as EventsState } from "./events";
 import { spec } from "./init";
 import { Rational, RationalFromFloat } from "./rational";
 import {
@@ -34,7 +34,7 @@ import {
     State as SettingsState,
 } from "./settings";
 import { IObjectMap } from "./utility-types";
-import { EventsState, TargetState } from "./window-interface";
+import { TargetState } from "./window-interface";
 
 function formatSettings(targets?: IObjectMap<Rational>) {
     let settings = "";

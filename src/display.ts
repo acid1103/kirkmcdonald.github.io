@@ -8,6 +8,7 @@ import {
     IgnoreHandler,
     ModuleCopyHandler,
     ModuleHandler,
+    State as EventsState,
 } from "./events";
 import { Factory } from "./factory";
 import { formatSettings } from "./fragment";
@@ -29,7 +30,7 @@ import { pipeLength } from "./steps";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
 import { renderGraph } from "./visualize";
-import { EventsState, TargetState } from "./window-interface";
+import { TargetState } from "./window-interface";
 
 const State = {} as {
     sortOrder: string;
