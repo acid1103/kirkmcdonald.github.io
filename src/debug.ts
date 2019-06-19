@@ -1,124 +1,87 @@
+import $ = require("jquery");
 import { getImage } from "./icon";
 import { solver } from "./init";
 import { Matrix } from "./matrix";
 import { MatrixSolver } from "./vectorize";
 
 function getSolutionHeader(matrixSolver: MatrixSolver, costHeader: boolean) {
-    const row = document.createElement("tr");
-    const items = matrixSolver.items;
-    for (const item of items) {
-        const currCell = document.createElement("th");
-        currCell.appendChild(new Text("s"));
-        currCell.appendChild(getImage(item));
-        row.appendChild(currCell);
-    }
-    let cell = document.createElement("th");
-    cell.appendChild(new Text("tax"));
-    row.appendChild(cell);
-    const recipes = matrixSolver.recipes;
-    for (const obj of recipes) {
-        const currCell = document.createElement("th");
-        currCell.appendChild(getImage(obj));
-        row.appendChild(currCell);
-    }
-    cell = document.createElement("th");
-    cell.appendChild(new Text("answer"));
-    row.appendChild(cell);
-    if (costHeader) {
-        const currCell = document.createElement("th");
-        currCell.appendChild(new Text("C"));
-        row.appendChild(currCell);
-    }
+    const row = $("<tr>");
+    row.append(
+        ...matrixSolver.items.map((item) => $("<th>").text("s").append(getImage(item))),
+        $("<th>").text("tax"),
+        ...matrixSolver.recipes.map((obj) => $("<th>").append(getImage(obj))),
+        $("<th>").text("answer"),
+    );
+    if (costHeader) { row.append($("<th>").text("C")); }
     return row;
 }
 
 function renderMatrix(matrixSolver: MatrixSolver, A: Matrix, rowIcons: boolean) {
-    const table = document.createElement("table");
-    table.border = "1";
+    const table = $("<table>").prop("border", "1");
     const header = getSolutionHeader(matrixSolver, true);
-    if (rowIcons) {
-        header.insertBefore(document.createElement("th"), header.firstChild);
-    }
-    table.appendChild(header);
+    if (rowIcons) { header.prepend($("<th>")); }
+    table.append(header);
     for (let j = 0; j < A.rows; j++) {
-        const row = document.createElement("tr");
-        table.appendChild(row);
+        const row = $("<tr>");
+        table.append(row);
         if (rowIcons) {
-            const td = document.createElement("td");
+            const td = $("<td>");
             if (j < matrixSolver.recipes.length) {
                 const recipes = matrixSolver.recipes[j];
-                td.appendChild(getImage(recipes));
+                td.append(getImage(recipes));
             } else if (j === A.rows - 2) {
-                td.appendChild(new Text("tax"));
+                td.text("tax");
             } else if (j === A.rows - 1) {
-                td.appendChild(new Text("answer"));
+                td.text("answer");
             }
-            row.appendChild(td);
+            row.append(td);
         }
         for (let k = 0; k < A.cols; k++) {
-            const cell = document.createElement("td");
-            cell.classList.add("right-align");
-            row.appendChild(cell);
+            const cell = $("<td>").addClass("right-align");
+            row.append(cell);
             const x = A.index(j, k);
-            const tt = document.createElement("tt");
-            tt.textContent = x.toMixed();
-            cell.appendChild(tt);
+            const tt = $("<tt>").text(x.toMixed());
+            cell.append(tt);
         }
     }
     return table;
 }
 
 function renderDebug() {
-    const debugTab = document.getElementById("debug_tab");
+    let node = $('<div id="matrixes">');
+    $("#matrixes").replaceWith(node);
 
-    const oldMatrixes = document.getElementById("matrixes");
-    let node = document.createElement("div");
-    node.id = "matrixes";
-    debugTab.replaceChild(node, oldMatrixes);
+    solver.matrixSolvers.forEach((matrixSolver) => node.append(renderMatrix(matrixSolver, matrixSolver.matrix, true)));
 
-    for (const matrixSolver of solver.matrixSolvers) {
-        const A = matrixSolver.matrix;
-        const table = renderMatrix(matrixSolver, A, true);
-        node.appendChild(table);
-    }
-
-    const oldSolutions = document.getElementById("solution");
-    node = document.createElement("div");
-    node.id = "solution";
-    debugTab.replaceChild(node, oldSolutions);
+    node = $('<div id="solution">');
+    $("#solution").replaceWith(node);
 
     for (const matrixSolver of solver.matrixSolvers) {
         let A = matrixSolver.lastProblem;
-        if (A) {
-            const table = renderMatrix(matrixSolver, A, false);
-            node.appendChild(table);
-        }
+        if (A) { node.append(renderMatrix(matrixSolver, A, false)); }
+
         A = matrixSolver.lastSolution;
         if (A) {
             // var basis = getBasis(A)
-            const table = document.createElement("table");
-            table.border = "1";
-            const header = getSolutionHeader(matrixSolver, true);
-            table.appendChild(header);
-            const row = document.createElement("tr");
-            table.appendChild(row);
+            const table = $("<table>").prop("border", "1");
+            const row = $("<tr>");
+            table.append(
+                getSolutionHeader(matrixSolver, true),
+                row,
+            );
             for (let j = 0; j < A.cols; j++) {
-                const cell = document.createElement("td");
-                cell.classList.add("right-align");
-                row.appendChild(cell);
+                const cell = $("<td>").addClass("right-align");
+                row.append(cell);
                 // var x = basis[j]
                 const x = A.index(A.rows - 1, j);
-                const tt = document.createElement("tt");
-                tt.textContent = x.toDecimal(3);
-                cell.appendChild(tt);
+                const tt = $("<tt>").text(x.toDecimal(3));
+                cell.append(tt);
             }
-            node.appendChild(table);
+            node.append(table);
         }
     }
 }
 
 export {
-    getSolutionHeader,
-    renderMatrix,
     renderDebug,
 };
