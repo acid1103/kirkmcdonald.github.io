@@ -7,6 +7,8 @@ import { Recipe } from "./recipe";
 import { Totals } from "./totals";
 import { IObjectMap } from "./utility-types";
 
+const TooltipCache = new Map<Item, HTMLDivElement>();
+
 class Item implements IIconned {
     public name: string;
     public iconCol: number;
@@ -64,20 +66,26 @@ class Item implements IIconned {
     }
 
     public renderTooltip(extra: HTMLSpanElement) {
+        if (!extra && TooltipCache.has(this)) {
+            return TooltipCache.get(this);
+        }
+        let tooltip;
         if (this.recipes.length === 1 && this.recipes[0].name === this.name) {
-            return this.recipes[0].renderTooltip(extra);
+            tooltip = this.recipes[0].renderTooltip(extra);
+        } else {
+            tooltip = document.createElement("div");
+            tooltip.classList.add("frame");
+            const title = document.createElement("h3");
+            const im = getImage(this, true);
+            title.appendChild(im);
+            title.appendChild(new Text(formatName(this.name)));
+            tooltip.appendChild(title);
+            if (extra) {
+                tooltip.appendChild(extra);
+            }
         }
-        const t = document.createElement("div");
-        t.classList.add("frame");
-        const title = document.createElement("h3");
-        const im = getImage(this, true);
-        title.appendChild(im);
-        title.appendChild(new Text(formatName(this.name)));
-        t.appendChild(title);
-        if (extra) {
-            t.appendChild(extra);
-        }
-        return t;
+        if (!extra) { TooltipCache.set(this, tooltip); }
+        return tooltip;
     }
 }
 
