@@ -61,7 +61,7 @@ button.ui:focus {
 button#debug_button {
     float: right;
 }
-img.icon {
+div.icon {
     background-repeat: no-repeat;
     display: inline-block;
     height: 32px;

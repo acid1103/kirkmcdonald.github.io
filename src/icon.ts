@@ -40,20 +40,20 @@ function getImage(obj: IIconned, suppressTooltip?: boolean, tooltipTarget?: HTML
     } else {
         im.title = obj.name;
     }
-    im.alt = obj.name;
+    // im.alt = obj.name;
     return im;
 }
 
-function addTooltip(im: HTMLImageElement, obj: IIconned, target: HTMLElement) {
+function addTooltip(im: HTMLElement, obj: IIconned, target: HTMLElement) {
     const node = obj.renderTooltip();
     return new Tooltip(im, node, target);
 }
 
 function blankImage() {
-    const im = document.createElement("img");
+    const im = document.createElement("div");
     // Chrome wants the <img> element to have a src attribute, or it will
     // draw a border around it. Cram in this transparent 1x1 pixel image.
-    im.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    // im.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     return im;
 }
 

@@ -242,7 +242,7 @@ class ItemRow implements IRow {
     public name: string;
     public item: Item;
     public itemIcon: ItemIcon;
-    public image: HTMLImageElement;
+    public image: HTMLElement;
     public rateNode: HTMLElement;
     public beltCell: HTMLTableDataCellElement;
     public beltCountNode: HTMLElement;

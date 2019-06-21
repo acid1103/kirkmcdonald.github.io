@@ -1,13 +1,13 @@
 import * as Popper from "popper.js";
 
 export class Tooltip {
-    public reference: HTMLImageElement;
+    public reference: HTMLElement;
     public content: HTMLDivElement;
     public target: HTMLElement;
     public isOpen: boolean;
     public node: HTMLDivElement;
     public popper: Popper.default;
-    constructor(reference: HTMLImageElement, content: HTMLDivElement, target: HTMLElement) {
+    constructor(reference: HTMLElement, content: HTMLDivElement, target: HTMLElement) {
         if (!target) {
             target = reference;
         }
